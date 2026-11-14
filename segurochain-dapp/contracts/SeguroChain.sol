@@ -4,11 +4,13 @@ pragma solidity ^0.8.20;
 /// @title SeguroChain
 /// @author Trabalho 2 — ODS III
 /// @notice Contrato de seguro veicular descentralizado na rede Ethereum Sepolia.
-///         A seguradora é o endereço que faz o deploy (owner).
+///         A seguradora é o endereço que faz o deploy (owner). Os segurados
+///         interagem por meio de carteiras MetaMask.
 /// @dev    Solidity 0.8.20 — sem overflow, sem SafeMath necessário.
 contract SeguroChain {
 
     // ENUMERAÇÕES
+ 
 
     /// @notice Tipos de cobertura disponíveis no seguro
     enum TipoCobertura { COLISAO, ROUBO, INCENDIO }
@@ -25,13 +27,13 @@ contract SeguroChain {
     struct Apolice {
         uint256 id;
         address proprietario;       // carteira do segurado
-        string  modelo;
-        string  placa;
-        uint256 ano;
+        string  modelo;             // modelo/identificação do veículo
+        string  placa;              // placa do veículo
+        uint256 ano;                // ano de fabricação do veículo
         uint256 valorSegurado;      // valor máximo de indenização (em wei)
         uint256 franquia;           // valor da franquia (em wei)
         uint256 dataInicio;         // timestamp de início da vigência
-        uint256 dataFim;            // timestamp de fim da vigência
+        uint256 dataFim;            // timestamp de fim   da vigência
         bool[3] coberturas;         // [0]=COLISAO, [1]=ROUBO, [2]=INCENDIO
         uint256 valorComprometido;  // soma das indenizações aprovadas/pagas
         StatusApolice status;
@@ -42,12 +44,12 @@ contract SeguroChain {
         uint256 id;
         uint256 apoliceId;
         TipoCobertura  tipo;
-        uint256 valorSolicitado;
-        uint256 data;
+        uint256 valorSolicitado;    // valor bruto pedido pelo segurado (em wei)
+        uint256 data;               // timestamp do evento (sinistro)
         StatusSinistro status;
-        string  motivo;
-        uint256 franquiaAplicada;
-        uint256 valorIndenizacao;
+        string  motivo;             // motivo da decisão da análise
+        uint256 franquiaAplicada;   // franquia descontada (pode ser 0)
+        uint256 valorIndenizacao;   // valor líquido a pagar (valorSolicitado - franquia)
     }
 
     // VARIÁVEIS DE ESTADO
@@ -55,16 +57,23 @@ contract SeguroChain {
     /// @notice Endereço da seguradora (deployer)
     address public owner;
 
+    /// @notice Contador de apólices emitidas (também serve de próximo ID)
     uint256 public totalApolices;
 
+    /// @notice Contador de sinistros registrados (também serve de próximo ID)
     uint256 public totalSinistros;
 
+    /// @notice Mapeamento ID → Apólice
     mapping(uint256 => Apolice) public apolices;
 
+    /// @notice Mapeamento ID → Sinistro
     mapping(uint256 => Sinistro) public sinistros;
 
     /// @notice IDs de sinistros vinculados a cada apólice
     mapping(uint256 => uint256[]) public sinistrosDaApolice;
+
+    /// @notice IDs de apólices vinculados a cada carteira
+    mapping(address => uint256[]) public apolicesDoProprietario;
 
     // CONSTANTES DE REGRA DE NEGÓCIO
 
@@ -76,6 +85,7 @@ contract SeguroChain {
 
     // EVENTOS
 
+    /// @notice Disparado quando uma nova apólice é emitida
     event ApoliceEmitida(
         uint256 indexed id,
         address indexed proprietario,
@@ -89,10 +99,13 @@ contract SeguroChain {
         bool[3] coberturas
     );
 
+    /// @notice Disparado quando uma apólice muda para status ATIVA
     event ApoliceAtivada(uint256 indexed id);
 
+    /// @notice Disparado quando uma apólice é cancelada
     event ApoliceCancelada(uint256 indexed id);
 
+    /// @notice Disparado quando um sinistro é registrado pelo segurado
     event SinistroRegistrado(
         uint256 indexed id,
         uint256 indexed apoliceId,
@@ -101,6 +114,7 @@ contract SeguroChain {
         uint256 data
     );
 
+    /// @notice Disparado quando a seguradora conclui a análise de um sinistro
     event SinistroAnalisado(
         uint256 indexed id,
         uint256 indexed apoliceId,
@@ -110,7 +124,13 @@ contract SeguroChain {
         string  motivo
     );
 
-    event SinistroPago(uint256 indexed id, uint256 valorPago);
+    /// @notice Disparado quando a indenização de um sinistro é paga
+    event SinistroPago(
+        uint256 indexed id,
+        uint256 indexed apoliceId,
+        uint256 valorPago,
+        address indexed proprietario
+    );
 
     // MODIFIERS
 
@@ -143,6 +163,7 @@ contract SeguroChain {
 
     // CONSTRUTOR
 
+    /// @notice Inicializa o contrato definindo o deployer como seguradora (owner)
     constructor() {
         owner = msg.sender;
     }
@@ -151,7 +172,16 @@ contract SeguroChain {
 
     /// @notice Emite uma nova apólice de seguro veicular.
     ///         Apenas a seguradora (owner) pode chamar esta função.
-    /// @return ID da apólice criada
+    /// @param _proprietario  Endereço da carteira do segurado
+    /// @param _modelo        Modelo/identificação do veículo
+    /// @param _placa         Placa do veículo
+    /// @param _ano           Ano de fabricação do veículo
+    /// @param _valorSegurado Valor máximo de indenização (em wei)
+    /// @param _franquia      Valor da franquia (em wei)
+    /// @param _dataInicio    Timestamp de início da vigência
+    /// @param _dataFim       Timestamp de fim da vigência
+    /// @param _coberturas    Array de coberturas: [COLISAO, ROUBO, INCENDIO]
+    /// @return               ID da apólice criada
     function emitirApolice(
         address _proprietario,
         string  calldata _modelo,
@@ -168,37 +198,44 @@ contract SeguroChain {
         returns (uint256)
     {
         // --- Validações básicas ---
-        require(_proprietario != address(0), "Proprietario invalido");
-        require(bytes(_modelo).length > 0,   "Modelo obrigatorio");
-        require(bytes(_placa).length > 0,    "Placa obrigatoria");
-        require(_valorSegurado > 0,          "Valor segurado deve ser maior que zero");
-        require(_dataFim > _dataInicio,      "Data fim deve ser posterior a data inicio");
+        require(_proprietario != address(0),          "Proprietario invalido");
+        require(bytes(_modelo).length > 0,            "Modelo obrigatorio");
+        require(bytes(_placa).length > 0,             "Placa obrigatoria");
+        require(_ano > 1900 && _ano <= 2100,          "Ano invalido");
+        require(_valorSegurado > 0,                   "Valor segurado deve ser maior que zero");
+        require(_dataFim > _dataInicio,               "Data fim deve ser posterior a data inicio");
+        require(_dataInicio >= block.timestamp,       "Data inicio nao pode ser no passado");
 
         // --- Regra: franquia não pode exceder PERCENTUAL_MAXIMO_FRANQUIA% do valor segurado ---
         uint256 franquiaMaxima = (_valorSegurado * PERCENTUAL_MAXIMO_FRANQUIA) / 100;
         require(_franquia <= franquiaMaxima, "Franquia excede o limite de 20% do valor segurado");
 
-        // --- TODO: validar o ano (1900–2100), exigir ao menos uma cobertura marcada
-        //     e não aceitar dataInicio no passado ---
+        // --- Pelo menos uma cobertura deve ser contratada ---
+        require(
+            _coberturas[0] || _coberturas[1] || _coberturas[2],
+            "Ao menos uma cobertura deve ser selecionada"
+        );
 
         // --- Criação ---
         uint256 novoId = totalApolices + 1;
         totalApolices  = novoId;
 
         apolices[novoId] = Apolice({
-            id:                novoId,
-            proprietario:      _proprietario,
-            modelo:            _modelo,
-            placa:             _placa,
-            ano:               _ano,
-            valorSegurado:     _valorSegurado,
-            franquia:          _franquia,
-            dataInicio:        _dataInicio,
-            dataFim:           _dataFim,
-            coberturas:        _coberturas,
+            id:               novoId,
+            proprietario:     _proprietario,
+            modelo:           _modelo,
+            placa:            _placa,
+            ano:              _ano,
+            valorSegurado:    _valorSegurado,
+            franquia:         _franquia,
+            dataInicio:       _dataInicio,
+            dataFim:          _dataFim,
+            coberturas:       _coberturas,
             valorComprometido: 0,
-            status:            StatusApolice.ATIVA
+            status:           StatusApolice.ATIVA
         });
+
+        apolicesDoProprietario[_proprietario].push(novoId);
 
         emit ApoliceEmitida(
             novoId,
@@ -217,6 +254,7 @@ contract SeguroChain {
     }
 
     /// @notice Ativa uma apólice que estava pendente.
+    /// @param _id ID da apólice
     function ativarApolice(uint256 _id)
         external
         apenasOwner
@@ -231,6 +269,7 @@ contract SeguroChain {
     }
 
     /// @notice Cancela uma apólice ativa ou pendente.
+    /// @param _id ID da apólice
     function cancelarApolice(uint256 _id)
         external
         apenasOwner
@@ -244,10 +283,11 @@ contract SeguroChain {
         apolices[_id].status = StatusApolice.CANCELADA;
         emit ApoliceCancelada(_id);
     }
-
     // FUNÇÕES DE CONSULTA — APÓLICES
 
     /// @notice Retorna todos os dados de uma apólice.
+    /// @param _id ID da apólice
+    /// @return Struct Apolice completa
     function consultarApolice(uint256 _id)
         external
         view
@@ -259,6 +299,8 @@ contract SeguroChain {
 
     /// @notice Retorna o saldo disponível para novas indenizações na apólice.
     ///         saldo = valorSegurado - valorComprometido
+    /// @param _id ID da apólice
+    /// @return Saldo em wei (0 se esgotado)
     function saldoDisponivel(uint256 _id)
         external
         view
@@ -273,6 +315,10 @@ contract SeguroChain {
     }
 
     /// @notice Verifica se uma apólice está vigente em determinada data.
+    ///         Vigente = status ATIVA e data dentro do intervalo [dataInicio, dataFim].
+    /// @param _id   ID da apólice
+    /// @param _data Timestamp a verificar
+    /// @return true se vigente, false caso contrário
     function estaVigente(uint256 _id, uint256 _data)
         public
         view
@@ -287,11 +333,26 @@ contract SeguroChain {
         );
     }
 
+    /// @notice Lista os IDs de todas as apólices de um proprietário.
+    /// @param _wallet Endereço da carteira do segurado
+    /// @return Array de IDs
+    function listarApolicesProprietario(address _wallet)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return apolicesDoProprietario[_wallet];
+    }
+
     // FUNÇÕES DO SEGURADO — SINISTROS
 
     /// @notice Registra um sinistro contra uma apólice.
     ///         Apenas o proprietário da apólice pode chamar esta função.
-    /// @return ID do sinistro criado
+    /// @param _apoliceId       ID da apólice
+    /// @param _tipo            Tipo de cobertura (TipoCobertura)
+    /// @param _valorSolicitado Valor bruto do dano alegado (em wei)
+    /// @param _data            Timestamp do evento/sinistro
+    /// @return                 ID do sinistro criado
     function registrarSinistro(
         uint256 _apoliceId,
         TipoCobertura _tipo,
@@ -306,8 +367,8 @@ contract SeguroChain {
         require(_valorSolicitado > 0, "Valor solicitado deve ser maior que zero");
         require(_data > 0,            "Data do sinistro invalida");
 
-        uint256 novoId = totalSinistros + 1;
-        totalSinistros = novoId;
+        uint256 novoId     = totalSinistros + 1;
+        totalSinistros     = novoId;
 
         sinistros[novoId] = Sinistro({
             id:               novoId,
@@ -331,13 +392,23 @@ contract SeguroChain {
     // FUNÇÕES DA SEGURADORA — SINISTROS
 
     /// @notice Analisa um sinistro aplicando as regras de negócio.
-    ///         1. Apólice vigente na data do sinistro.
-    ///         2. Tipo de sinistro com cobertura contratada.
-    ///         3. Franquia zero para ROUBO ou perda total (>= 75% do valor segurado).
-    ///         4. Valor solicitado deve superar a franquia.
-    ///         5. Indenização não pode exceder o saldo disponível.
-    /// @dev TODO: testei com valor solicitado igual à franquia e o sinistro foi
-    ///      aprovado com indenização 0. Conferir a regra 4.
+    ///         Apenas a seguradora (owner) pode chamar esta função.
+    ///
+    ///         Regras de negócio:
+    ///         1. A apólice deve estar vigente na data do sinistro.
+    ///         2. O tipo de sinistro deve ter cobertura contratada.
+    ///         3. Franquia é ZERO nos casos:
+    ///            a) Tipo ROUBO
+    ///            b) Perda total (valorSolicitado >= 75% do valorSegurado)
+    ///            Nos demais casos aplica-se a franquia contratada.
+    ///         4. O valor solicitado deve ser superior à franquia (quando > 0).
+    ///         5. O valor da indenização não pode exceder o saldo disponível.
+    ///
+    /// @param _id ID do sinistro
+    /// @return aprovado          true se aprovado
+    /// @return franquiaAplicada  Valor da franquia descontada
+    /// @return valorIndenizacao  Valor líquido a ser pago
+    /// @return motivo            Descrição textual da decisão
     function analisarSinistro(uint256 _id)
         external
         apenasOwner
@@ -356,23 +427,29 @@ contract SeguroChain {
 
         // --- Regra 1: vigência ---
         if (!estaVigente(s.apoliceId, s.data)) {
-            motivo   = "Apolice nao estava vigente na data do sinistro";
-            s.status = StatusSinistro.REJEITADO;
-            s.motivo = motivo;
+            motivo            = "Apolice nao estava vigente na data do sinistro";
+            aprovado          = false;
+            franquiaAplicada  = 0;
+            valorIndenizacao  = 0;
+            s.status          = StatusSinistro.REJEITADO;
+            s.motivo          = motivo;
             emit SinistroAnalisado(_id, s.apoliceId, false, 0, 0, motivo);
-            return (false, 0, 0, motivo);
+            return (aprovado, franquiaAplicada, valorIndenizacao, motivo);
         }
 
         // --- Regra 2: cobertura ---
         uint256 tipoIdx = uint256(s.tipo);
         if (!a.coberturas[tipoIdx]) {
-            motivo = string(abi.encodePacked(
+            motivo            = string(abi.encodePacked(
                 "Cobertura do tipo ", _toString(tipoIdx), " nao contratada"
             ));
-            s.status = StatusSinistro.REJEITADO;
-            s.motivo = motivo;
+            aprovado          = false;
+            franquiaAplicada  = 0;
+            valorIndenizacao  = 0;
+            s.status          = StatusSinistro.REJEITADO;
+            s.motivo          = motivo;
             emit SinistroAnalisado(_id, s.apoliceId, false, 0, 0, motivo);
-            return (false, 0, 0, motivo);
+            return (aprovado, franquiaAplicada, valorIndenizacao, motivo);
         }
 
         // --- Regra 3: calcular franquia ---
@@ -380,13 +457,13 @@ contract SeguroChain {
         bool isRoubo    = (s.tipo == TipoCobertura.ROUBO);
 
         if (isRoubo || perdaTotal) {
-            franquiaAplicada = 0;
+            franquiaAplicada = 0;   // sem franquia para roubo ou perda total
         } else {
             franquiaAplicada = a.franquia;
         }
 
         // --- Regra 4: valor solicitado deve superar a franquia ---
-        if (franquiaAplicada > 0 && s.valorSolicitado < franquiaAplicada) {
+        if (franquiaAplicada > 0 && s.valorSolicitado <= franquiaAplicada) {
             motivo = string(abi.encodePacked(
                 "Valor solicitado (",
                 _toString(s.valorSolicitado),
@@ -394,11 +471,13 @@ contract SeguroChain {
                 _toString(franquiaAplicada),
                 " wei)"
             ));
-            s.status           = StatusSinistro.REJEITADO;
-            s.motivo           = motivo;
+            aprovado         = false;
+            valorIndenizacao = 0;
+            s.status         = StatusSinistro.REJEITADO;
+            s.motivo         = motivo;
             s.franquiaAplicada = franquiaAplicada;
             emit SinistroAnalisado(_id, s.apoliceId, false, franquiaAplicada, 0, motivo);
-            return (false, franquiaAplicada, 0, motivo);
+            return (aprovado, franquiaAplicada, valorIndenizacao, motivo);
         }
 
         // --- Calcular indenização líquida ---
@@ -417,11 +496,13 @@ contract SeguroChain {
                 _toString(saldo),
                 " wei)"
             ));
-            s.status           = StatusSinistro.REJEITADO;
-            s.motivo           = motivo;
+            aprovado         = false;
+            valorIndenizacao = 0;
+            s.status         = StatusSinistro.REJEITADO;
+            s.motivo         = motivo;
             s.franquiaAplicada = franquiaAplicada;
             emit SinistroAnalisado(_id, s.apoliceId, false, franquiaAplicada, 0, motivo);
-            return (false, franquiaAplicada, 0, motivo);
+            return (aprovado, franquiaAplicada, valorIndenizacao, motivo);
         }
 
         // --- Aprovado ---
@@ -443,6 +524,10 @@ contract SeguroChain {
     }
 
     /// @notice Registra o pagamento de um sinistro aprovado.
+    ///         Apenas a seguradora (owner) pode chamar esta função.
+    ///         Nota: o pagamento real (transferência de ETH) é feito off-chain
+    ///         ou via sistema da seguradora — este contrato apenas registra o estado.
+    /// @param _id ID do sinistro
     function pagarSinistro(uint256 _id)
         external
         apenasOwner
@@ -453,15 +538,20 @@ contract SeguroChain {
 
         s.status = StatusSinistro.PAGO;
 
-        emit SinistroPago(_id, s.valorIndenizacao);
+        address proprietario = apolices[s.apoliceId].proprietario;
+
+        emit SinistroPago(_id, s.apoliceId, s.valorIndenizacao, proprietario);
     }
 
     // FUNÇÕES DE CONSULTA — SINISTROS
 
     /// @notice Lista os IDs de todos os sinistros de uma apólice.
+    /// @param _apoliceId ID da apólice
+    /// @return Array de IDs de sinistros
     function listarSinistrosApolice(uint256 _apoliceId)
         external
         view
+        apoliceExiste(_apoliceId)
         returns (uint256[] memory)
     {
         return sinistrosDaApolice[_apoliceId];
@@ -470,6 +560,7 @@ contract SeguroChain {
     // FUNÇÕES INTERNAS / AUXILIARES
 
     /// @dev Converte um uint256 para sua representação em string decimal.
+    ///      Usado internamente para compor mensagens de motivo.
     function _toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) return "0";
 
