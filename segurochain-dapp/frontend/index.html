@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SeguroChain — Sistema de Seguro</title>
+  <title>SeguroChain — dApp de Seguro Veicular</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,7 +12,7 @@
   <header class="app-header">
     <div class="header-inner">
       <h1>🔗 SeguroChain</h1>
-      <p class="subtitle">Sistema de Seguro Veicular — Ethereum</p>
+      <p class="subtitle">dApp de Seguro Veicular — Ethereum Sepolia</p>
     </div>
   </header>
 
@@ -22,18 +21,18 @@
     <!-- CONEXÃO COM METAMASK -->
     <section class="card" id="sec-conexao">
       <h2>🦊 Conexão</h2>
-      <button id="btn-conectar" onclick="conectar()">Conectar Carteira</button>
+      <button id="btn-conectar" onclick="conectar()">Conectar MetaMask</button>
       <div id="info-conexao" class="info-box hidden">
         <p><strong>Conta:</strong> <span id="txt-conta">—</span></p>
-        <p><strong>Rede:</strong> <span id="txt-rede">—</span></p>
-        <p id="aviso-rede" class="aviso hidden">⚠️ Verifique se está conectado à rede Sepolia.</p>
+        <p><strong>Rede (Chain ID):</strong> <span id="txt-rede">—</span></p>
+        <p id="aviso-rede" class="aviso hidden">⚠️ Conecte-se à rede <strong>Sepolia</strong> (Chain ID 11155111) no MetaMask.</p>
       </div>
     </section>
 
     <!-- EMITIR APÓLICE (apenas owner/seguradora) -->
     <section class="card" id="sec-emitir">
       <h2>📋 Emitir Apólice <span class="badge badge-owner">Seguradora</span></h2>
-      <p class="card-desc">A seguradora pode emitir novas apólices para os proprietários.</p>
+      <p class="card-desc">Apenas o endereço da seguradora (owner do contrato) pode emitir apólices.</p>
 
       <div class="form-grid">
         <div class="form-group">
@@ -41,8 +40,8 @@
           <input type="text" id="e-proprietario" placeholder="0x..." />
         </div>
         <div class="form-group">
-          <label for="e-modelo">Modelo do Veículo</label>
-          <input type="text" id="e-modelo" placeholder="Ex.: Toyota Corolla" />
+          <label for="e-modelo">Modelo / Identificação do Veículo</label>
+          <input type="text" id="e-modelo" placeholder="Ex.: Toyota Corolla 2.0" />
         </div>
         <div class="form-group">
           <label for="e-placa">Placa do Veículo</label>
@@ -50,15 +49,15 @@
         </div>
         <div class="form-group">
           <label for="e-ano">Ano do Veículo</label>
-          <input type="number" id="e-ano" placeholder="Ex.: 2022" min="1900" max="2024" />
+          <input type="number" id="e-ano" placeholder="Ex.: 2022" min="1900" max="2100" />
         </div>
         <div class="form-group">
           <label for="e-valor-segurado">Valor Segurado (ETH)</label>
-          <input type="number" id="e-valor-segurado" placeholder="Ex.: 1.5" step="0.01" min="0" />
+          <input type="number" id="e-valor-segurado" placeholder="Ex.: 1.5" step="0.001" min="0" />
         </div>
         <div class="form-group">
           <label for="e-franquia">Franquia (ETH)</label>
-          <input type="number" id="e-franquia" placeholder="Ex.: 0.1" step="0.01" min="0" />
+          <input type="number" id="e-franquia" placeholder="Ex.: 0.1" step="0.001" min="0" />
         </div>
         <div class="form-group">
           <label for="e-data-inicio">Data de Início da Vigência</label>
@@ -98,7 +97,7 @@
       <div class="form-row">
         <div class="form-group">
           <label for="c-apolice-id">ID da Apólice</label>
-          <input type="number" id="c-apolice-id" placeholder="Ex.: 1" min="0" />
+          <input type="number" id="c-apolice-id" placeholder="Ex.: 1" min="1" />
         </div>
         <button onclick="consultarApolice()">Consultar</button>
       </div>
@@ -127,12 +126,12 @@
     <!-- REGISTRAR SINISTRO (segurado) -->
     <section class="card" id="sec-sinistro">
       <h2>⚠️ Registrar Sinistro <span class="badge badge-user">Segurado</span></h2>
-      <p class="card-desc">O proprietário pode registrar um sinistro associado à sua apólice.</p>
+      <p class="card-desc">Apenas o proprietário da apólice pode registrar um sinistro.</p>
 
       <div class="form-grid">
         <div class="form-group">
           <label for="s-apolice-id">ID da Apólice</label>
-          <input type="number" id="s-apolice-id" placeholder="Ex.: 1" min="0" />
+          <input type="number" id="s-apolice-id" placeholder="Ex.: 1" min="1" />
         </div>
         <div class="form-group">
           <label for="s-tipo">Tipo de Cobertura</label>
@@ -144,7 +143,7 @@
         </div>
         <div class="form-group">
           <label for="s-valor">Valor Solicitado (ETH)</label>
-          <input type="number" id="s-valor" placeholder="Ex.: 0.5" step="0.01" min="0" />
+          <input type="number" id="s-valor" placeholder="Ex.: 0.5" step="0.001" min="0" />
         </div>
         <div class="form-group">
           <label for="s-data">Data do Sinistro</label>
@@ -159,12 +158,12 @@
     <!-- ANALISAR SINISTRO (owner) -->
     <section class="card" id="sec-analisar">
       <h2>🔬 Analisar Sinistro <span class="badge badge-owner">Seguradora</span></h2>
-      <p class="card-desc">A seguradora realiza a análise do sinistro conforme as regras do contrato.</p>
+      <p class="card-desc">A seguradora analisa o sinistro aplicando as regras de negócio automaticamente.</p>
 
       <div class="form-row">
         <div class="form-group">
           <label for="a-sinistro-id">ID do Sinistro</label>
-          <input type="number" id="a-sinistro-id" placeholder="Ex.: 1" min="0" />
+          <input type="number" id="a-sinistro-id" placeholder="Ex.: 1" min="1" />
         </div>
         <button onclick="analisarSinistro()">Analisar</button>
       </div>
@@ -175,12 +174,12 @@
     <!-- PAGAR SINISTRO (owner) -->
     <section class="card" id="sec-pagar">
       <h2>💰 Pagar Sinistro <span class="badge badge-owner">Seguradora</span></h2>
-      <p class="card-desc">Realiza o pagamento de um sinistro aprovado pela seguradora.</p>
+      <p class="card-desc">Registra o pagamento de um sinistro previamente aprovado.</p>
 
       <div class="form-row">
         <div class="form-group">
           <label for="p-sinistro-id">ID do Sinistro</label>
-          <input type="number" id="p-sinistro-id" placeholder="Ex.: 1" min="0" />
+          <input type="number" id="p-sinistro-id" placeholder="Ex.: 1" min="1" />
         </div>
         <button onclick="pagarSinistro()">Pagar Sinistro</button>
       </div>
@@ -200,11 +199,11 @@
   </main>
 
   <footer class="app-footer">
-    <p>SeguroChain · Ethereum · ODS III · 2023</p>
+    <p>SeguroChain dApp · Ethereum Sepolia · ODS III · 2024</p>
     <p>Contrato: <span id="footer-address">0x0000...0000</span></p>
   </footer>
 
-  <!-- Web3.js via CDN -->
+  <!-- Web3.js v4 via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/web3@4.16.0/dist/web3.min.js"></script>
   <!-- Lógica do dApp -->
   <script src="app.js"></script>

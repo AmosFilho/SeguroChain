@@ -1,43 +1,43 @@
-/* =============================================================
-   SeguroChain dApp — style.css
-   Dark theme · Responsive · Extends the Mural de Mensagens style
-============================================================= */
+/* SeguroChain dApp — style.css */
 
-/* ----------------------------------------------------------
-   CUSTOM PROPERTIES (variáveis de tema)
----------------------------------------------------------- */
 :root {
-  --bg:          #0f1220;
-  --bg-alt:      #0b0e1a;
-  --card:        #181c2f;
+  --bg: #0f1220;
+  --bg-alt: #0b0e1a;
+  --card: #181c2f;
   --card-border: #2a2f4a;
-  --input-bg:    #1e2338;
-  --input-border:#2e3550;
-  --accent:      #6c63ff;
+  --input-bg: #1e2338;
+  --input-border: #2e3550;
+  --accent: #6c63ff;
   --accent-dark: #4f46c8;
-  --accent-hover:#8b85ff;
-  --text:        #e2e8f0;
-  --text-muted:  #8892a4;
-  --text-dim:    #64748b;
-  --success:     #22c55e;
-  --success-bg:  #052e16;
-  --error:       #ef4444;
-  --error-bg:    #2d0a0a;
-  --warn:        #f59e0b;
-  --warn-bg:     #2d1a00;
-  --info:        #60a5fa;
-  --info-bg:     #0a1628;
-  --radius:      10px;
-  --shadow:      0 4px 24px rgba(0, 0, 0, 0.5);
-  --transition:  0.2s ease;
+  --accent-hover: #8b85ff;
+  --text: #e2e8f0;
+  --text-muted: #8892a4;
+  --text-dim: #64748b;
+  --success: #22c55e;
+  --success-bg: #052e16;
+  --error: #ef4444;
+  --error-bg: #2d0a0a;
+  --warn: #f59e0b;
+  --warn-bg: #2d1a00;
+  --info: #60a5fa;
+  --info-bg: #0a1628;
+  --radius: 10px;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  --transition: 0.2s ease;
 }
 
-/* ----------------------------------------------------------
-   RESET & BASE
----------------------------------------------------------- */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+}
 
 body {
   background-color: var(--bg);
@@ -52,11 +52,12 @@ a {
   color: var(--accent-hover);
   text-decoration: none;
 }
-a:hover { text-decoration: underline; }
 
-/* ----------------------------------------------------------
-   CABEÇALHO
----------------------------------------------------------- */
+a:hover {
+  text-decoration: underline;
+}
+
+/* Header */
 .app-header {
   background: linear-gradient(135deg, #12163a 0%, #1a1f3c 100%);
   border-bottom: 1px solid var(--card-border);
@@ -81,9 +82,7 @@ a:hover { text-decoration: underline; }
   margin-top: 0.25rem;
 }
 
-/* ----------------------------------------------------------
-   LAYOUT PRINCIPAL
----------------------------------------------------------- */
+/* Layout */
 .container {
   max-width: 900px;
   margin: 0 auto;
@@ -93,9 +92,7 @@ a:hover { text-decoration: underline; }
   gap: 1.5rem;
 }
 
-/* ----------------------------------------------------------
-   CARDS
----------------------------------------------------------- */
+/* Cards */
 .card {
   background: var(--card);
   border: 1px solid var(--card-border);
@@ -105,7 +102,9 @@ a:hover { text-decoration: underline; }
   transition: border-color var(--transition);
 }
 
-.card:hover { border-color: rgba(108, 99, 255, 0.4); }
+.card:hover {
+  border-color: rgba(108, 99, 255, 0.4);
+}
 
 .card h2 {
   font-size: 1.15rem;
@@ -123,9 +122,7 @@ a:hover { text-decoration: underline; }
   margin-bottom: 1.25rem;
 }
 
-/* ----------------------------------------------------------
-   FORMULÁRIOS — GRID DE DOIS COLUNAS
----------------------------------------------------------- */
+/* Forms */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -134,7 +131,9 @@ a:hover { text-decoration: underline; }
 }
 
 @media (max-width: 600px) {
-  .form-grid { grid-template-columns: 1fr; }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-row {
@@ -145,7 +144,10 @@ a:hover { text-decoration: underline; }
   flex-wrap: wrap;
 }
 
-.form-row .form-group { flex: 1; min-width: 150px; }
+.form-row .form-group {
+  flex: 1;
+  min-width: 150px;
+}
 
 .form-group {
   display: flex;
@@ -186,7 +188,9 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
 }
 
-input::placeholder { color: var(--text-dim); }
+input::placeholder {
+  color: var(--text-dim);
+}
 
 select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238892a4' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -196,8 +200,9 @@ select {
   padding-right: 2.2rem;
 }
 
-/* Coberturas (checkboxes) */
-.coberturas-group { margin-bottom: 1.5rem; }
+.coberturas-group {
+  margin-bottom: 1.5rem;
+}
 
 .checkbox-row {
   display: flex;
@@ -222,9 +227,7 @@ select {
   cursor: pointer;
 }
 
-/* ----------------------------------------------------------
-   BOTÕES
----------------------------------------------------------- */
+/* Buttons */
 button {
   background: var(--accent);
   border: none;
@@ -244,7 +247,9 @@ button:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-button:active:not(:disabled) { transform: translateY(0); }
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
 
 button:disabled {
   background: #2a2f4a;
@@ -266,9 +271,7 @@ button:disabled {
   color: var(--text);
 }
 
-/* ----------------------------------------------------------
-   INFO BOX (conexão)
----------------------------------------------------------- */
+/* UI Elements & Badges */
 .info-box {
   margin-top: 1rem;
   background: var(--input-bg);
@@ -279,11 +282,10 @@ button:disabled {
   line-height: 1.8;
 }
 
-.info-box p { margin: 0; }
+.info-box p {
+  margin: 0;
+}
 
-/* ----------------------------------------------------------
-   BADGES
----------------------------------------------------------- */
 .badge {
   display: inline-block;
   font-size: 0.7rem;
@@ -294,16 +296,42 @@ button:disabled {
   border-radius: 20px;
 }
 
-.badge-owner  { background: rgba(108, 99, 255, 0.25); color: #a78bfa; border: 1px solid rgba(108, 99, 255, 0.4); }
-.badge-user   { background: rgba(96, 165, 250, 0.2);  color: #93c5fd; border: 1px solid rgba(96, 165, 250, 0.35); }
-.badge-green  { background: var(--success-bg); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.4); }
-.badge-red    { background: var(--error-bg);   color: var(--error);   border: 1px solid rgba(239, 68, 68, 0.4); }
-.badge-yellow { background: var(--warn-bg);    color: var(--warn);    border: 1px solid rgba(245, 158, 11, 0.4); }
-.badge-gray   { background: #1e2338;           color: var(--text-dim);border: 1px solid #2e3550; }
+.badge-owner {
+  background: rgba(108, 99, 255, 0.25);
+  color: #a78bfa;
+  border: 1px solid rgba(108, 99, 255, 0.4);
+}
 
-/* ----------------------------------------------------------
-   CAIXAS DE RESULTADO
----------------------------------------------------------- */
+.badge-user {
+  background: rgba(96, 165, 250, 0.2);
+  color: #93c5fd;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+}
+
+.badge-green {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.badge-red {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-yellow {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-gray {
+  background: #1e2338;
+  color: var(--text-dim);
+  border: 1px solid #2e3550;
+}
+
 .result-box {
   margin-top: 1rem;
   border-radius: 6px;
@@ -338,7 +366,6 @@ button:disabled {
   color: #93c5fd;
 }
 
-/* Sub-caixas de resultado do sinistro analisado */
 .result-approved {
   background: var(--success-bg);
   border: 1px solid rgba(34, 197, 94, 0.4);
@@ -357,9 +384,7 @@ button:disabled {
   color: #fca5a5;
 }
 
-/* ----------------------------------------------------------
-   TABELA DE DADOS DA APÓLICE
----------------------------------------------------------- */
+/* Tables */
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -391,13 +416,15 @@ button:disabled {
 }
 
 .data-table tr:last-child th,
-.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:last-child td {
+  border-bottom: none;
+}
 
-.data-table tr:hover td { background: rgba(255, 255, 255, 0.025); }
+.data-table tr:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
 
-/* ----------------------------------------------------------
-   LOG DE ATIVIDADE
----------------------------------------------------------- */
+/* Logs */
 .status-log {
   background: var(--bg-alt);
   border: 1px solid var(--card-border);
@@ -410,23 +437,41 @@ button:disabled {
   font-size: 0.8rem;
 }
 
-.status-log::-webkit-scrollbar { width: 6px; }
-.status-log::-webkit-scrollbar-track { background: var(--bg-alt); }
-.status-log::-webkit-scrollbar-thumb { background: #2a2f4a; border-radius: 3px; }
+.status-log::-webkit-scrollbar {
+  width: 6px;
+}
+
+.status-log::-webkit-scrollbar-track {
+  background: var(--bg-alt);
+}
+
+.status-log::-webkit-scrollbar-thumb {
+  background: #2a2f4a;
+  border-radius: 3px;
+}
 
 .log-entry {
   padding: 0.2rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-.log-success { color: var(--success); }
-.log-error   { color: var(--error); }
-.log-warn    { color: var(--warn); }
-.log-info    { color: var(--info); }
+.log-success {
+  color: var(--success);
+}
 
-/* ----------------------------------------------------------
-   AVISO DE REDE INCORRETA
----------------------------------------------------------- */
+.log-error {
+  color: var(--error);
+}
+
+.log-warn {
+  color: var(--warn);
+}
+
+.log-info {
+  color: var(--info);
+}
+
+/* Utilities & Footer */
 .aviso {
   margin-top: 0.6rem;
   background: var(--warn-bg);
@@ -437,14 +482,10 @@ button:disabled {
   padding: 0.5rem 0.75rem;
 }
 
-/* ----------------------------------------------------------
-   UTILITÁRIOS
----------------------------------------------------------- */
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+}
 
-/* ----------------------------------------------------------
-   RODAPÉ
----------------------------------------------------------- */
 .app-footer {
   background: var(--bg-alt);
   border-top: 1px solid var(--card-border);
@@ -455,19 +496,39 @@ button:disabled {
   line-height: 1.8;
 }
 
-/* ----------------------------------------------------------
-   RESPONSIVIDADE
----------------------------------------------------------- */
+/* Responsive */
 @media (max-width: 768px) {
-  .header-inner h1 { font-size: 1.75rem; }
-  .container { padding: 1.25rem 0.9rem; }
-  .card { padding: 1.25rem; }
-  .form-row { flex-direction: column; }
-  .form-row button { width: 100%; }
-  .checkbox-row { gap: 1rem; }
+  .header-inner h1 {
+    font-size: 1.75rem;
+  }
+
+  .container {
+    padding: 1.25rem 0.9rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row button {
+    width: 100%;
+  }
+
+  .checkbox-row {
+    gap: 1rem;
+  }
 }
 
 @media (max-width: 480px) {
-  .card h2 { font-size: 1rem; }
-  .data-table th { width: 35%; }
+  .card h2 {
+    font-size: 1rem;
+  }
+
+  .data-table th {
+    width: 35%;
+  }
 }
