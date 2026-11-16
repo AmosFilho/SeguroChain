@@ -86,6 +86,7 @@ async function conectar() {
     document.getElementById("txt-conta").textContent = conta;
     document.getElementById("txt-rede").textContent = `${chainId}`;
     document.getElementById("info-conexao").classList.remove("hidden");
+    document.getElementById("msg-desconectado").classList.add("hidden");
     document.getElementById("btn-conectar").textContent = "✅ Conectado";
     document.getElementById("btn-conectar").disabled = true;
 
@@ -151,6 +152,9 @@ async function configurarPerfil() {
 
   document.querySelectorAll(".area-owner").forEach((s) => s.classList.toggle("hidden", !ehOwner));
   document.querySelectorAll(".area-segurado").forEach((s) => s.classList.toggle("hidden", ehOwner));
+
+  // Troca as cores da página para o tema do segurado
+  document.body.classList.toggle("assegurado-page", !ehOwner);
 
   const perfil = document.getElementById("txt-perfil");
   perfil.textContent = ehOwner ? "Seguradora" : "Segurado";
@@ -226,7 +230,7 @@ async function emitirApolice() {
     mostrarResultado(
       "result-emitir",
       `✅ Apólice #${novoId} emitida com sucesso!<br>
-       Tx Hash: <a href="https://sepolia.etherscan.io/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a>`,
+       ${statusConfirmada(receipt)}`,
       "success"
     );
     log(`✅ Apólice #${novoId} emitida. Tx: ${receipt.transactionHash}`, "success");
@@ -375,8 +379,8 @@ async function registrarSinistro() {
     mostrarResultado(
       "result-sinistro",
       `✅ Sinistro #${novoId} registrado com sucesso!<br>
-       Status: EM ANÁLISE<br>
-       Tx: <a href="https://sepolia.etherscan.io/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a>`,
+       Situação do sinistro: EM ANÁLISE<br>
+       ${statusConfirmada(receipt)}`,
       "success"
     );
     log(`✅ Sinistro #${novoId} registrado. Tx: ${receipt.transactionHash}`, "success");
@@ -434,7 +438,7 @@ async function analisarSinistro() {
           Franquia Aplicada: ${franquia} ETH<br>
           Valor de Indenização: ${indenizacao} ETH
         </div>
-        Tx: <a href="https://sepolia.etherscan.io/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a>`,
+        ${statusConfirmada(receipt)}`,
         aprovado ? "success" : "error"
       );
       log(`${icone} Sinistro #${id} ${aprovado ? "APROVADO" : "REJEITADO"}: ${motivo}`, aprovado ? "success" : "error");
@@ -481,7 +485,7 @@ async function pagarSinistro() {
       "result-pagar",
       `✅ Indenização do sinistro #${id} paga ao segurado!<br>
        Valor: ${valor} ETH<br>
-       Tx: <a href="https://sepolia.etherscan.io/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a>`,
+       ${statusConfirmada(receipt)}`,
       "success"
     );
     log(`✅ Sinistro #${id} pago (${valor} ETH). Tx: ${receipt.transactionHash}`, "success");
@@ -520,7 +524,7 @@ async function pagarPremio() {
     mostrarResultado(
       "result-premio",
       `✅ Prêmio de ${formatarEth(premio)} pago. A apólice #${id} está ATIVA.<br>
-       Tx: ${linkTx(receipt.transactionHash)}`,
+       ${statusConfirmada(receipt)}`,
       "success"
     );
     log(`✅ Prêmio da apólice #${id} pago. Tx: ${receipt.transactionHash}`, "success");
@@ -551,7 +555,7 @@ async function depositarFundos() {
       "result-reserva"
     );
 
-    mostrarResultado("result-reserva", `✅ ${valorEth} ETH depositados na reserva.<br>Tx: ${linkTx(receipt.transactionHash)}`, "success");
+    mostrarResultado("result-reserva", `✅ ${valorEth} ETH depositados na reserva.<br>${statusConfirmada(receipt)}`, "success");
     log(`✅ Depósito de ${valorEth} ETH. Tx: ${receipt.transactionHash}`, "success");
 
   } catch (err) {
@@ -578,7 +582,7 @@ async function sacarFundos() {
       "result-reserva"
     );
 
-    mostrarResultado("result-reserva", `✅ ${valorEth} ETH sacados da reserva.<br>Tx: ${linkTx(receipt.transactionHash)}`, "success");
+    mostrarResultado("result-reserva", `✅ ${valorEth} ETH sacados da reserva.<br>${statusConfirmada(receipt)}`, "success");
     log(`✅ Saque de ${valorEth} ETH. Tx: ${receipt.transactionHash}`, "success");
 
   } catch (err) {
@@ -606,7 +610,7 @@ async function cancelarApolice() {
       "result-cancelar"
     );
 
-    mostrarResultado("result-cancelar", `✅ Apólice #${id} cancelada.<br>Tx: ${linkTx(receipt.transactionHash)}`, "success");
+    mostrarResultado("result-cancelar", `✅ Apólice #${id} cancelada.<br>${statusConfirmada(receipt)}`, "success");
     log(`✅ Apólice #${id} cancelada. Tx: ${receipt.transactionHash}`, "success");
 
   } catch (err) {
@@ -752,8 +756,14 @@ async function enviarTransacao(metodo, opcoes, resultElId) {
     log(`⏳ Transação enviada: ${hash}`, "info");
   });
 
+  log(`✅ Transação confirmada no bloco ${receipt.blockNumber}: ${receipt.transactionHash}`, "success");
   atualizarDados();
   return receipt;
+}
+
+/** Linha padrão de transação confirmada: bloco e link para o Etherscan. */
+function statusConfirmada(receipt) {
+  return `Status: confirmada no bloco ${receipt.blockNumber}<br>Tx: ${linkTx(receipt.transactionHash)}`;
 }
 
 /**
@@ -784,8 +794,13 @@ function traduzirErro(err) {
   }
 
   const texto = `${err.message || ""} ${detalhe.message || ""}`;
-  if (/insufficient funds/i.test(texto)) {
+  // A simulação (.call) devolve "insufficient balance"; o envio devolve "insufficient funds"
+  if (/insufficient (funds|balance)/i.test(texto)) {
     return "Saldo de ETH insuficiente na carteira para pagar o valor e o gas.";
+  }
+  // Transação minerada mas revertida (o recibo vem com status 0)
+  if (/reverted by the EVM/i.test(texto)) {
+    return "A transação falhou: foi revertida pelo contrato.";
   }
   return detalhe.message || err.message || String(err);
 }

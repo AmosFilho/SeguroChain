@@ -156,7 +156,7 @@ contract SeguroChain {
     /// @notice Disparado quando a seguradora saca o excedente da reserva
     event FundosSacados(address indexed para, uint256 valor);
 
-    // ERROS PERSONALIZADOS
+    // ERROS PERSONALIZADOS  [Recurso: EventosEErros]
 
     /// @notice Valor enviado em pagarPremio diferente do prêmio da apólice
     error PremioIncorreto(uint256 esperado, uint256 recebido);
