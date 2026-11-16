@@ -4,6 +4,10 @@
 // Endereço zerado = contrato ainda não configurado
 const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+// Bloco em que o contrato foi implantado (ver no Etherscan).
+// O histórico de eventos é buscado a partir dele.
+const DEPLOY_BLOCK = 0;
+
 // ABI copiada do Remix (Solidity Compiler > ABI)
 const ABI = [
   {

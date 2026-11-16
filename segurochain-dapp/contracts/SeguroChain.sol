@@ -314,6 +314,12 @@ contract SeguroChain {
         uint256 premio = valorPremio(_id);
         if (msg.value != premio) revert PremioIncorreto(premio, msg.value);
 
+        // A cobertura só começa quando o prêmio é pago: impede contratar o seguro
+        // depois do acidente e registrar um sinistro com data anterior ao pagamento
+        if (block.timestamp > apolices[_id].dataInicio) {
+            apolices[_id].dataInicio = block.timestamp;
+        }
+
         apolices[_id].status = StatusApolice.ATIVA;
         emit ApoliceAtivada(_id, msg.sender, msg.value);
     }
@@ -429,6 +435,10 @@ contract SeguroChain {
         apenasDono(_apoliceId)
         returns (uint256)
     {
+        require(
+            apolices[_apoliceId].status == StatusApolice.ATIVA,
+            "Apolice precisa estar ATIVA (premio pago)"
+        );
         require(_valorSolicitado > 0, "Valor solicitado deve ser maior que zero");
         require(_data > 0,            "Data do sinistro invalida");
         require(
