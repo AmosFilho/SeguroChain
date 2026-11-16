@@ -9,18 +9,10 @@
  *  - web3.utils.toWei(valor, 'ether')   → converte ETH → wei (BigInt no v4)
  *  - web3.utils.fromWei(wei, 'ether')   → converte wei → ETH (string)
  *
+ * O endereço e a ABI do contrato ficam em contrato.js.
+ */
 
 "use strict";
-
-// CONFIGURAÇÃO — preencher após o deploy
-
-/**
- * Endereço do contrato SeguroChain implantado na rede Sepolia.
- * Substitua pelo endereço real após o deploy via Remix IDE ou Hardhat.
- */
-const CONTRACT_ADDRESS = "0xB8949d90b7A59bFB81efcC9E18A6AB36A32e7aA1";
-
-const ABI = [];
 
 // ID da rede Sepolia
 const SEPOLIA_CHAIN_ID = 11155111;
