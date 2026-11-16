@@ -20,17 +20,59 @@
 
     <!-- CONEXÃO COM METAMASK -->
     <section class="card" id="sec-conexao">
-      <h2>🦊 Conexão</h2>
+      <h2>🦊 Conexão <span id="txt-perfil" class="badge hidden"></span></h2>
       <button id="btn-conectar" onclick="conectar()">Conectar MetaMask</button>
       <div id="info-conexao" class="info-box hidden">
         <p><strong>Conta:</strong> <span id="txt-conta">—</span></p>
+        <p><strong>Saldo:</strong> <span id="txt-saldo">—</span></p>
         <p><strong>Rede (Chain ID):</strong> <span id="txt-rede">—</span></p>
-        <p id="aviso-rede" class="aviso hidden">⚠️ Conecte-se à rede <strong>Sepolia</strong> (Chain ID 11155111) no MetaMask.</p>
+        <div id="aviso-rede" class="aviso hidden">
+          <span>⚠️ Conecte-se à rede <strong>Sepolia</strong> (Chain ID 11155111) no MetaMask.</span>
+          <button class="btn-small" onclick="trocarParaSepolia()">Trocar para Sepolia</button>
+        </div>
       </div>
     </section>
 
+    <!-- PAINEL DO CONTRATO (leitura) -->
+    <section class="card" id="sec-painel">
+      <h2>📊 Painel do Contrato</h2>
+      <div class="painel">
+        <div class="painel-item"><span>Apólices</span><strong id="p-total-apolices">—</strong></div>
+        <div class="painel-item"><span>Sinistros</span><strong id="p-total-sinistros">—</strong></div>
+        <div class="painel-item"><span>Saldo do contrato</span><strong id="p-saldo-contrato">—</strong></div>
+        <div class="painel-item"><span>A pagar</span><strong id="p-total-apagar">—</strong></div>
+        <div class="painel-item"><span>Reserva livre</span><strong id="p-saldo-livre">—</strong></div>
+      </div>
+      <button class="btn-secondary" onclick="carregarPainel()">Atualizar</button>
+    </section>
+
+    <!-- MINHAS APÓLICES / PAGAR PRÊMIO (segurado) -->
+    <section class="card area-segurado" id="sec-premio">
+      <h2>🚗 Minhas Apólices <span class="badge badge-user">Segurado</span></h2>
+      <p class="card-desc">A apólice só fica ATIVA depois que o prêmio é pago.</p>
+
+      <table class="data-table lista">
+        <thead>
+          <tr><th>ID</th><th>Veículo</th><th>Prêmio</th><th>Status</th></tr>
+        </thead>
+        <tbody id="tb-minhas-apolices">
+          <tr><td colspan="4">Conecte a carteira para ver suas apólices.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pr-apolice-id">ID da Apólice</label>
+          <input type="number" id="pr-apolice-id" placeholder="Ex.: 1" min="1" />
+        </div>
+        <button onclick="pagarPremio()">Pagar Prêmio</button>
+      </div>
+
+      <div id="result-premio" class="result-box hidden"></div>
+    </section>
+
     <!-- EMITIR APÓLICE (apenas owner/seguradora) -->
-    <section class="card" id="sec-emitir">
+    <section class="card area-owner" id="sec-emitir">
       <h2>📋 Emitir Apólice <span class="badge badge-owner">Seguradora</span></h2>
       <p class="card-desc">Apenas o endereço da seguradora (owner do contrato) pode emitir apólices.</p>
 
@@ -117,14 +159,23 @@
             <tr><th>Coberturas</th><td id="d-coberturas">—</td></tr>
             <tr><th>Valor Comprometido</th><td id="d-comprometido">—</td></tr>
             <tr><th>Saldo Disponível</th><td id="d-saldo">—</td></tr>
+            <tr><th>Prêmio</th><td id="d-premio">—</td></tr>
             <tr><th>Status</th><td id="d-status">—</td></tr>
           </tbody>
+        </table>
+
+        <h3>Sinistros da Apólice</h3>
+        <table class="data-table lista">
+          <thead>
+            <tr><th>ID</th><th>Tipo</th><th>Valor</th><th>Indenização</th><th>Status</th><th>Motivo</th></tr>
+          </thead>
+          <tbody id="tb-sinistros-apolice"></tbody>
         </table>
       </div>
     </section>
 
     <!-- REGISTRAR SINISTRO (segurado) -->
-    <section class="card" id="sec-sinistro">
+    <section class="card area-segurado" id="sec-sinistro">
       <h2>⚠️ Registrar Sinistro <span class="badge badge-user">Segurado</span></h2>
       <p class="card-desc">Apenas o proprietário da apólice pode registrar um sinistro.</p>
 
@@ -156,7 +207,7 @@
     </section>
 
     <!-- ANALISAR SINISTRO (owner) -->
-    <section class="card" id="sec-analisar">
+    <section class="card area-owner" id="sec-analisar">
       <h2>🔬 Analisar Sinistro <span class="badge badge-owner">Seguradora</span></h2>
       <p class="card-desc">A seguradora analisa o sinistro aplicando as regras de negócio automaticamente.</p>
 
@@ -172,9 +223,9 @@
     </section>
 
     <!-- PAGAR SINISTRO (owner) -->
-    <section class="card" id="sec-pagar">
+    <section class="card area-owner" id="sec-pagar">
       <h2>💰 Pagar Sinistro <span class="badge badge-owner">Seguradora</span></h2>
-      <p class="card-desc">Registra o pagamento de um sinistro previamente aprovado.</p>
+      <p class="card-desc">Transfere a indenização em ETH para o segurado. O contrato precisa ter saldo na reserva.</p>
 
       <div class="form-row">
         <div class="form-group">
@@ -185,6 +236,56 @@
       </div>
 
       <div id="result-pagar" class="result-box hidden"></div>
+    </section>
+
+    <!-- RESERVA DE FUNDOS (owner) -->
+    <section class="card area-owner" id="sec-reserva">
+      <h2>🏦 Reserva de Fundos <span class="badge badge-owner">Seguradora</span></h2>
+      <p class="card-desc">O ETH depositado aqui é usado para pagar as indenizações. Só é possível sacar o que não está comprometido.</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="r-deposito">Depositar (ETH)</label>
+          <input type="number" id="r-deposito" placeholder="Ex.: 0.5" step="0.001" min="0" />
+        </div>
+        <button onclick="depositarFundos()">Depositar</button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="r-saque">Sacar (ETH)</label>
+          <input type="number" id="r-saque" placeholder="Ex.: 0.1" step="0.001" min="0" />
+        </div>
+        <button class="btn-secondary" onclick="sacarFundos()">Sacar</button>
+      </div>
+
+      <div id="result-reserva" class="result-box hidden"></div>
+    </section>
+
+    <!-- CANCELAR APÓLICE (owner) -->
+    <section class="card area-owner" id="sec-cancelar">
+      <h2>🚫 Cancelar Apólice <span class="badge badge-owner">Seguradora</span></h2>
+      <p class="card-desc">Cancela uma apólice pendente ou ativa e libera a placa para uma nova apólice.</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="x-apolice-id">ID da Apólice</label>
+          <input type="number" id="x-apolice-id" placeholder="Ex.: 1" min="1" />
+        </div>
+        <button class="btn-danger" onclick="cancelarApolice()">Cancelar Apólice</button>
+      </div>
+
+      <div id="result-cancelar" class="result-box hidden"></div>
+    </section>
+
+    <!-- HISTÓRICO DE EVENTOS -->
+    <section class="card" id="sec-eventos">
+      <h2>📜 Histórico de Eventos</h2>
+      <p class="card-desc">Eventos emitidos pelo contrato, lidos da blockchain.</p>
+      <ul id="lista-eventos" class="lista-eventos">
+        <li>Conecte a carteira para carregar os eventos.</li>
+      </ul>
+      <button class="btn-secondary" onclick="carregarEventos()">Atualizar Eventos</button>
     </section>
 
     <!-- ÁREA DE STATUS / LOG GLOBAL -->

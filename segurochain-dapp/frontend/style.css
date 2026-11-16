@@ -532,3 +532,116 @@ button:disabled {
     width: 35%;
   }
 }
+/* ----------------------------------------------------------
+   BOTÕES EXTRAS
+---------------------------------------------------------- */
+.btn-small {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.btn-danger {
+  background: #b91c1c;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--error);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+}
+
+/* Aviso de rede com botão ao lado */
+div.aviso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ----------------------------------------------------------
+   PAINEL DO CONTRATO
+---------------------------------------------------------- */
+.painel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.painel-item {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.painel-item span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.painel-item strong {
+  font-size: 1.1rem;
+}
+
+.valor-negativo {
+  color: var(--error);
+}
+
+/* ----------------------------------------------------------
+   TABELAS DE LISTAGEM (minhas apólices, sinistros)
+---------------------------------------------------------- */
+.lista {
+  margin-bottom: 1.25rem;
+}
+
+.lista th {
+  width: auto;
+}
+
+.result-box h3 {
+  font-size: 0.95rem;
+  margin-top: 1.25rem;
+  color: var(--text);
+}
+
+/* ----------------------------------------------------------
+   HISTÓRICO DE EVENTOS
+---------------------------------------------------------- */
+.lista-eventos {
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lista-eventos li {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.lista-eventos li small {
+  display: block;
+  color: var(--text-dim);
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 600px) {
+  .lista {
+    display: block;
+    overflow-x: auto;
+  }
+}
