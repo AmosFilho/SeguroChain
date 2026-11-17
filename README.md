@@ -137,13 +137,21 @@ Em `segurochain-dapp/frontend/contrato.js`, preencher `CONTRACT_ADDRESS` com o e
 
 ### Rodar localmente
 
-A MetaMask não funciona em páginas abertas como arquivo (`file://`), então é preciso servir a pasta:
+A MetaMask não funciona em páginas abertas como arquivo (`file://`), então é preciso servir a pasta.
+
+Com o script do projeto:
+
+```bash
+npm run dev
+```
+
+Ou diretamente:
 
 ```bash
 npx serve segurochain-dapp/frontend
 ```
 
-ou
+Ou com Python:
 
 ```bash
 python -m http.server 8000 --directory segurochain-dapp/frontend
@@ -218,6 +226,7 @@ SeguroChain/
 │       └── prints/
 ├── dApp/          exemplo do professor (Mural de Mensagens)
 ├── seguroApp/     projeto Java do primeiro trabalho
+├── package.json   script `dev` para servir o frontend localmente
 ├── vercel.json
 └── README.md
 ```
