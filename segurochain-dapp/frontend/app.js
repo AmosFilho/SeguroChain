@@ -51,10 +51,25 @@ function inicializar() {
     log("⚠️ ABI ou CONTRACT_ADDRESS não configurados. Edite contrato.js após o deploy.", "warn");
   }
 
-  // Escuta mudanças de conta no MetaMask → recarrega a página
-  window.ethereum.on("accountsChanged", () => {
-    log("🔄 Conta alterada — recarregando…", "info");
-    window.location.reload();
+  // Escuta mudanças de conta no MetaMask → atualiza reativamente sem dar reload na página
+  window.ethereum.on("accountsChanged", async (contas) => {
+    log("🔄 Mudança de conta detectada no MetaMask…", "info");
+    if (!contas || contas.length === 0) {
+      conta = null;
+      document.getElementById("txt-conta").textContent = "—";
+      document.getElementById("txt-saldo").textContent = "—";
+      document.getElementById("info-conexao").classList.add("hidden");
+      document.getElementById("msg-desconectado").classList.remove("hidden");
+      const btnConectar = document.getElementById("btn-conectar");
+      btnConectar.textContent = "Conectar MetaMask";
+      btnConectar.disabled = false;
+      const perfil = document.getElementById("txt-perfil");
+      perfil.classList.add("hidden");
+      document.querySelectorAll(".area-owner").forEach((s) => s.classList.add("hidden"));
+      document.querySelectorAll(".area-segurado").forEach((s) => s.classList.add("hidden"));
+      return;
+    }
+    await conectar();
   });
 
   // Escuta mudanças de rede no MetaMask → recarrega a página
@@ -178,13 +193,32 @@ async function trocarParaSepolia() {
   }
 }
 
+let perfilAtualEhOwner = false;
+
 /**
  * Descobre se a conta conectada é a seguradora (owner) e mostra
  * só as seções do perfil dela: área da seguradora ou área do segurado.
+ * Permite também alternar manualmente a visão clicando no badge de perfil.
+ * @param {boolean|null} forcarOwner Se definido, força a visualização como Seguradora ou Segurado.
  */
-async function configurarPerfil() {
-  const owner = await contract.methods.owner().call();
-  const ehOwner = owner.toLowerCase() === conta.toLowerCase();
+async function configurarPerfil(forcarOwner = null) {
+  let ehOwner = false;
+  let owner = null;
+
+  if (forcarOwner !== null) {
+    ehOwner = !!forcarOwner;
+  } else if (contract && conta) {
+    try {
+      owner = await contract.methods.owner().call();
+      ehOwner = owner.toLowerCase() === conta.toLowerCase();
+      log(`ℹ️ Conta: ${encurtar(conta)} | Seguradora (owner): ${encurtar(owner)} → Perfil: ${ehOwner ? "Seguradora" : "Segurado"}`, "info");
+    } catch (err) {
+      console.warn("Não foi possível consultar o owner do contrato:", err);
+      ehOwner = false;
+    }
+  }
+
+  perfilAtualEhOwner = ehOwner;
 
   document.querySelectorAll(".area-owner").forEach((s) => s.classList.toggle("hidden", !ehOwner));
   document.querySelectorAll(".area-segurado").forEach((s) => s.classList.toggle("hidden", ehOwner));
@@ -193,8 +227,24 @@ async function configurarPerfil() {
   document.body.classList.toggle("assegurado-page", !ehOwner);
 
   const perfil = document.getElementById("txt-perfil");
-  perfil.textContent = ehOwner ? "Seguradora" : "Segurado";
-  perfil.className = `badge ${ehOwner ? "badge-owner" : "badge-user"}`;
+  if (perfil) {
+    perfil.textContent = ehOwner ? "Seguradora" : "Segurado";
+    perfil.className = `badge ${ehOwner ? "badge-owner" : "badge-user"}`;
+    perfil.classList.remove("hidden");
+    perfil.title = "Clique para alternar a visão (Seguradora / Segurado)";
+    perfil.style.cursor = "pointer";
+    perfil.onclick = alternarVisaoPerfil;
+  }
+}
+
+/**
+ * Permite alternar manualmente a visão entre Seguradora e Segurado
+ * ao clicar no badge de perfil (útil para testes e apresentações).
+ */
+function alternarVisaoPerfil() {
+  const novoEstado = !perfilAtualEhOwner;
+  log(`🔄 Alternando visão manualmente para: ${novoEstado ? "Seguradora" : "Segurado"}`, "info");
+  configurarPerfil(novoEstado);
 }
 
 // EMITIR APÓLICE (apenas owner)
