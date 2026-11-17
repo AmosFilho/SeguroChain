@@ -14,798 +14,6 @@
 
 "use strict";
 
-<<<<<<< HEAD
-=======
-// CONFIGURAÇÃO — preencher após o deploy
-
-/**
- * Endereço do contrato SeguroChain implantado na rede Sepolia.
- * Substitua pelo endereço real após o deploy via Remix IDE ou Hardhat.
- */
-const CONTRACT_ADDRESS = "0xB8949d90b7A59bFB81efcC9E18A6AB36A32e7aA1";
-
-const ABI = [
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_id",
-        "type": "uint256"
-      }
-    ],
-    "name": "analisarSinistro",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "aprovado",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "franquiaAplicada",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "valorIndenizacao",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "motivo",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      }
-    ],
-    "name": "ApoliceAtivada",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      }
-    ],
-    "name": "ApoliceCancelada",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "proprietario",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "modelo",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "placa",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "ano",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "valorSegurado",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "franquia",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "dataInicio",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "dataFim",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool[3]",
-        "name": "coberturas",
-        "type": "bool[3]"
-      }
-    ],
-    "name": "ApoliceEmitida",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_id",
-        "type": "uint256"
-      }
-    ],
-    "name": "ativarApolice",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_id",
-        "type": "uint256"
-      }
-    ],
-    "name": "cancelarApolice",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_proprietario",
-        "type": "address"
-      },
-      {
-        "internalType": "string",
-        "name": "_modelo",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_placa",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_ano",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_valorSegurado",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_franquia",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_dataInicio",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_dataFim",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool[3]",
-        "name": "_coberturas",
-        "type": "bool[3]"
-      }
-    ],
-    "name": "emitirApolice",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_id",
-        "type": "uint256"
-      }
-    ],
-    "name": "pagarSinistro",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_apoliceId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "enum SeguroChain.TipoCobertura",
-        "name": "_tipo",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_valorSolicitado",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_data",
-        "type": "uint256"
-      }
-    ],
-    "name": "registrarSinistro",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "apoliceId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "aprovado",
-        "type": "bool"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "franquiaAplicada",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "valorIndenizacao",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "motivo",
-        "type": "string"
-      }
-    ],
-    "name": "SinistroAnalisado",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "apoliceId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "valorPago",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "proprietario",
-        "type": "address"
-      }
-    ],
-    "name": "SinistroPago",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "apoliceId",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "enum SeguroChain.TipoCobertura",
-        "name": "tipo",
-        "type": "uint8"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "valorSolicitado",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "data",
-        "type": "uint256"
-      }
-    ],
-    "name": "SinistroRegistrado",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "apolices",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "proprietario",
-        "type": "address"
-      },
-      {
-        "internalType": "string",
-        "name": "modelo",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "placa",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "ano",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "valorSegurado",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "franquia",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "dataInicio",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "dataFim",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "valorComprometido",
-        "type": "uint256"
-      },
-      {
-        "internalType": "enum SeguroChain.StatusApolice",
-        "name": "status",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "apolicesDoProprietario",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_id",
-        "type": "uint256"
-      }
-    ],
-    "name": "consultarApolice",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "id",
-            "type": "uint256"
-          },
-          {
-            "internalType": "address",
-            "name": "proprietario",
-            "type": "address"
-          },
-          {
-            "internalType": "string",
-            "name": "modelo",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "placa",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "ano",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "valorSegurado",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "franquia",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "dataInicio",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "dataFim",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool[3]",
-            "name": "coberturas",
-            "type": "bool[3]"
-          },
-          {
-            "internalType": "uint256",
-            "name": "valorComprometido",
-            "type": "uint256"
-          },
-          {
-            "internalType": "enum SeguroChain.StatusApolice",
-            "name": "status",
-            "type": "uint8"
-          }
-        ],
-        "internalType": "struct SeguroChain.Apolice",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_id",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_data",
-        "type": "uint256"
-      }
-    ],
-    "name": "estaVigente",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_wallet",
-        "type": "address"
-      }
-    ],
-    "name": "listarApolicesProprietario",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_apoliceId",
-        "type": "uint256"
-      }
-    ],
-    "name": "listarSinistrosApolice",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "PERCENTUAL_MAXIMO_FRANQUIA",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "PERCENTUAL_PERDA_TOTAL",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_id",
-        "type": "uint256"
-      }
-    ],
-    "name": "saldoDisponivel",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "sinistros",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "id",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "apoliceId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "enum SeguroChain.TipoCobertura",
-        "name": "tipo",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "valorSolicitado",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "data",
-        "type": "uint256"
-      },
-      {
-        "internalType": "enum SeguroChain.StatusSinistro",
-        "name": "status",
-        "type": "uint8"
-      },
-      {
-        "internalType": "string",
-        "name": "motivo",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "franquiaAplicada",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "valorIndenizacao",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "sinistrosDaApolice",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalApolices",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalSinistros",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
-
->>>>>>> origin/main
 // ID da rede Sepolia
 const SEPOLIA_CHAIN_ID = 11155111;
 
@@ -818,10 +26,14 @@ let conta;        // endereço MetaMask conectado
 // INICIALIZAÇÃO
 
 /**
- * Inicializa o Web3 e o contrato assim que a página carrega.
- * Verifica se o MetaMask está instalado.
+ * Inicializa o Web3 e o contrato.
+ *
+ * O MetaMask injeta window.ethereum de forma assíncrona: em alguns browsers
+ * ele ainda não está disponível quando o evento "load" dispara. Por isso
+ * tentamos imediatamente e, se não encontrar, aguardamos até 3 s pelo evento
+ * "ethereum#initialized" que a própria extensão emite quando termina a injeção.
  */
-window.addEventListener("load", () => {
+function inicializar() {
   if (typeof window.ethereum === "undefined") {
     log("❌ MetaMask não detectado. Instale a extensão MetaMask para usar este dApp.", "error");
     return;
@@ -836,7 +48,7 @@ window.addEventListener("load", () => {
     document.getElementById("footer-address").textContent = CONTRACT_ADDRESS;
     log("✅ Contrato carregado: " + CONTRACT_ADDRESS, "success");
   } else {
-    log("⚠️ ABI ou CONTRACT_ADDRESS não configurados. Edite app.js após o deploy.", "warn");
+    log("⚠️ ABI ou CONTRACT_ADDRESS não configurados. Edite contrato.js após o deploy.", "warn");
   }
 
   // Escuta mudanças de conta no MetaMask → recarrega a página
@@ -856,6 +68,27 @@ window.addEventListener("load", () => {
   window.ethereum.request({ method: "eth_accounts" }).then((contas) => {
     if (contas.length > 0) conectar();
   });
+}
+
+window.addEventListener("load", () => {
+  if (typeof window.ethereum !== "undefined") {
+    // MetaMask já estava injetado quando a página carregou — caminho normal
+    inicializar();
+  } else {
+    // Extensão ainda não terminou a injeção: aguarda o evento que ela emite
+    // ou desiste após 3 s (usuário sem MetaMask instalado)
+    const timer = setTimeout(() => {
+      window.removeEventListener("ethereum#initialized", onEthereum);
+      inicializar(); // chama de qualquer jeito — vai mostrar a mensagem de erro
+    }, 3000);
+
+    function onEthereum() {
+      clearTimeout(timer);
+      inicializar();
+    }
+
+    window.addEventListener("ethereum#initialized", onEthereum, { once: true });
+  }
 });
 
 // CONEXÃO COM METAMASK
@@ -865,6 +98,17 @@ window.addEventListener("load", () => {
  * Web3.js v4: window.ethereum.request() retorna uma Promise.
  */
 async function conectar() {
+  // Garante que o Web3 foi inicializado mesmo se o MetaMask demorou a injetar
+  if (!web3) {
+    if (typeof window.ethereum === "undefined") {
+      log("❌ MetaMask não detectado. Instale a extensão e recarregue a página.", "error");
+      return;
+    }
+    inicializar();
+    // Se após inicializar ainda não tiver web3, desiste
+    if (!web3) return;
+  }
+
   try {
     // Abre o popup do MetaMask para o usuário autorizar o acesso
     const contas = await window.ethereum.request({ method: "eth_requestAccounts" });
@@ -964,17 +208,17 @@ async function emitirApolice() {
   if (!verificarPronto("result-emitir")) return;
 
   try {
-    const proprietario   = document.getElementById("e-proprietario").value.trim();
-    const modelo         = document.getElementById("e-modelo").value.trim();
-    const placa          = document.getElementById("e-placa").value.trim();
-    const ano            = parseInt(document.getElementById("e-ano").value);
-    const valorEth       = document.getElementById("e-valor-segurado").value.trim();
-    const franquiaEth    = document.getElementById("e-franquia").value.trim();
-    const dataInicioStr  = document.getElementById("e-data-inicio").value;
-    const dataFimStr     = document.getElementById("e-data-fim").value;
-    const cobColisao     = document.getElementById("cob-colisao").checked;
-    const cobRoubo       = document.getElementById("cob-roubo").checked;
-    const cobIncendio    = document.getElementById("cob-incendio").checked;
+    const proprietario = document.getElementById("e-proprietario").value.trim();
+    const modelo = document.getElementById("e-modelo").value.trim();
+    const placa = document.getElementById("e-placa").value.trim();
+    const ano = parseInt(document.getElementById("e-ano").value);
+    const valorEth = document.getElementById("e-valor-segurado").value.trim();
+    const franquiaEth = document.getElementById("e-franquia").value.trim();
+    const dataInicioStr = document.getElementById("e-data-inicio").value;
+    const dataFimStr = document.getElementById("e-data-fim").value;
+    const cobColisao = document.getElementById("cob-colisao").checked;
+    const cobRoubo = document.getElementById("cob-roubo").checked;
+    const cobIncendio = document.getElementById("cob-incendio").checked;
 
     // Validações básicas no frontend
     if (!proprietario || !modelo || !placa || !ano || !valorEth || !dataInicioStr || !dataFimStr) {
@@ -986,12 +230,12 @@ async function emitirApolice() {
 
     // Converte ETH → wei usando Web3.js v4
     // toWei() aceita string; no v4 retorna BigInt
-    const valorWei    = web3.utils.toWei(valorEth, "ether");
+    const valorWei = web3.utils.toWei(valorEth, "ether");
     const franquiaWei = web3.utils.toWei(franquiaEth || "0", "ether");
 
     // Converte datas para timestamps Unix (segundos)
     const dataInicio = Math.floor(new Date(dataInicioStr).getTime() / 1000);
-    const dataFim    = Math.floor(new Date(dataFimStr).getTime() / 1000);
+    const dataFim = Math.floor(new Date(dataFimStr).getTime() / 1000);
 
     // Array de coberturas: [COLISAO, ROUBO, INCENDIO]
     const coberturas = [cobColisao, cobRoubo, cobIncendio];
@@ -1060,18 +304,18 @@ async function consultarApolice() {
     const saldo = await contract.methods.saldoDisponivel(id).call();
 
     // Preenche a tabela
-    document.getElementById("d-id").textContent           = a.id.toString();
+    document.getElementById("d-id").textContent = a.id.toString();
     document.getElementById("d-proprietario").textContent = a.proprietario;
-    document.getElementById("d-modelo").textContent       = a.modelo;
-    document.getElementById("d-placa").textContent        = a.placa;
-    document.getElementById("d-ano").textContent          = a.ano.toString();
+    document.getElementById("d-modelo").textContent = a.modelo;
+    document.getElementById("d-placa").textContent = a.placa;
+    document.getElementById("d-ano").textContent = a.ano.toString();
     document.getElementById("d-valor-segurado").textContent =
       web3.utils.fromWei(a.valorSegurado.toString(), "ether") + " ETH";
     document.getElementById("d-franquia").textContent =
       web3.utils.fromWei(a.franquia.toString(), "ether") + " ETH";
 
     const inicio = new Date(Number(a.dataInicio) * 1000).toLocaleDateString("pt-BR");
-    const fim    = new Date(Number(a.dataFim)    * 1000).toLocaleDateString("pt-BR");
+    const fim = new Date(Number(a.dataFim) * 1000).toLocaleDateString("pt-BR");
     document.getElementById("d-vigencia").textContent = `${inicio} → ${fim}`;
 
     // Coberturas: array bool[3]
@@ -1139,17 +383,17 @@ async function registrarSinistro() {
   if (!verificarPronto("result-sinistro")) return;
 
   try {
-    const apoliceId     = parseInt(document.getElementById("s-apolice-id").value);
-    const tipo          = parseInt(document.getElementById("s-tipo").value);
-    const valorEth      = document.getElementById("s-valor").value.trim();
-    const dataStr       = document.getElementById("s-data").value;
+    const apoliceId = parseInt(document.getElementById("s-apolice-id").value);
+    const tipo = parseInt(document.getElementById("s-tipo").value);
+    const valorEth = document.getElementById("s-valor").value.trim();
+    const dataStr = document.getElementById("s-data").value;
 
     if (!apoliceId || !valorEth || !dataStr) {
       return mostrarResultado("result-sinistro", "⚠️ Preencha todos os campos.", "warn");
     }
 
     const valorWei = web3.utils.toWei(valorEth, "ether");
-    let dataTs     = Math.floor(new Date(dataStr).getTime() / 1000);
+    let dataTs = Math.floor(new Date(dataStr).getTime() / 1000);
 
     // O campo só guarda minutos: se a data escolhida é o minuto atual, usa o horário exato.
     // Sem isso, um sinistro registrado logo após pagar o prêmio ficaria com horário
@@ -1165,8 +409,8 @@ async function registrarSinistro() {
       "result-sinistro"
     );
 
-    const evento  = receipt.events?.SinistroRegistrado;
-    const novoId  = evento?.returnValues?.id ?? "N/A";
+    const evento = receipt.events?.SinistroRegistrado;
+    const novoId = evento?.returnValues?.id ?? "N/A";
 
     mostrarResultado(
       "result-sinistro",
@@ -1213,14 +457,14 @@ async function analisarSinistro() {
     // Captura os dados do evento SinistroAnalisado emitido pelo contrato
     const evento = receipt.events?.SinistroAnalisado;
     if (evento) {
-      const rv            = evento.returnValues;
-      const aprovado      = rv.aprovado;
-      const franquia      = web3.utils.fromWei(rv.franquiaAplicada.toString(), "ether");
-      const indenizacao   = web3.utils.fromWei(rv.valorIndenizacao.toString(), "ether");
-      const motivo        = rv.motivo;
+      const rv = evento.returnValues;
+      const aprovado = rv.aprovado;
+      const franquia = web3.utils.fromWei(rv.franquiaAplicada.toString(), "ether");
+      const indenizacao = web3.utils.fromWei(rv.valorIndenizacao.toString(), "ether");
+      const motivo = rv.motivo;
 
       const classe = aprovado ? "result-approved" : "result-rejected";
-      const icone  = aprovado ? "✅" : "❌";
+      const icone = aprovado ? "✅" : "❌";
 
       mostrarResultado(
         "result-analisar",
@@ -1269,7 +513,7 @@ async function pagarSinistro() {
     );
 
     const evento = receipt.events?.SinistroPago;
-    const valor  = evento
+    const valor = evento
       ? web3.utils.fromWei(evento.returnValues.valorPago.toString(), "ether")
       : "N/A";
 
@@ -1517,15 +761,15 @@ async function carregarEventos() {
 function descreverEvento(ev) {
   const r = ev.returnValues;
   switch (ev.event) {
-    case "ApoliceEmitida":     return `Apólice #${r.id} emitida para ${encurtar(r.proprietario)} (placa ${r.placa})`;
-    case "ApoliceAtivada":     return `Prêmio da apólice #${r.id} pago (${formatarEth(r.premioPago)}), apólice ATIVA`;
-    case "ApoliceCancelada":   return `Apólice #${r.id} cancelada`;
+    case "ApoliceEmitida": return `Apólice #${r.id} emitida para ${encurtar(r.proprietario)} (placa ${r.placa})`;
+    case "ApoliceAtivada": return `Prêmio da apólice #${r.id} pago (${formatarEth(r.premioPago)}), apólice ATIVA`;
+    case "ApoliceCancelada": return `Apólice #${r.id} cancelada`;
     case "SinistroRegistrado": return `Sinistro #${r.id} (${TIPOS[Number(r.tipo)]}) registrado na apólice #${r.apoliceId}: ${formatarEth(r.valorSolicitado)}`;
-    case "SinistroAnalisado":  return `Sinistro #${r.id} ${r.aprovado ? "APROVADO" : "REJEITADO"}: ${r.motivo}`;
-    case "SinistroPago":       return `Sinistro #${r.id} pago: ${formatarEth(r.valorPago)} para ${encurtar(r.proprietario)}`;
-    case "FundosDepositados":  return `Depósito de ${formatarEth(r.valor)} na reserva`;
-    case "FundosSacados":      return `Saque de ${formatarEth(r.valor)} da reserva`;
-    default:                   return ev.event;
+    case "SinistroAnalisado": return `Sinistro #${r.id} ${r.aprovado ? "APROVADO" : "REJEITADO"}: ${r.motivo}`;
+    case "SinistroPago": return `Sinistro #${r.id} pago: ${formatarEth(r.valorPago)} para ${encurtar(r.proprietario)}`;
+    case "FundosDepositados": return `Depósito de ${formatarEth(r.valor)} na reserva`;
+    case "FundosSacados": return `Saque de ${formatarEth(r.valor)} da reserva`;
+    default: return ev.event;
   }
 }
 
@@ -1684,7 +928,7 @@ function log(msg, tipo = "info") {
   const logEl = document.getElementById("status-log");
   if (!logEl) return;
 
-  const hora    = new Date().toLocaleTimeString("pt-BR");
+  const hora = new Date().toLocaleTimeString("pt-BR");
   const entrada = document.createElement("p");
   entrada.className = `log-entry log-${tipo}`;
   entrada.textContent = `[${hora}] ${msg}`;
