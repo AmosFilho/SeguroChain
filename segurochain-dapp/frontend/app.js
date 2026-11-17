@@ -9,9 +9,13 @@
  *  - web3.utils.toWei(valor, 'ether')   → converte ETH → wei (BigInt no v4)
  *  - web3.utils.fromWei(wei, 'ether')   → converte wei → ETH (string)
  *
+ * O endereço e a ABI do contrato ficam em contrato.js.
+ */
 
 "use strict";
 
+<<<<<<< HEAD
+=======
 // CONFIGURAÇÃO — preencher após o deploy
 
 /**
@@ -801,6 +805,7 @@ const ABI = [
   }
 ];
 
+>>>>>>> origin/main
 // ID da rede Sepolia
 const SEPOLIA_CHAIN_ID = 11155111;
 
@@ -845,6 +850,12 @@ window.addEventListener("load", () => {
     log("🔄 Rede alterada — recarregando…", "info");
     window.location.reload();
   });
+
+  // Se o site já foi autorizado antes, reconecta sem abrir o popup
+  // (assim a tela volta preenchida depois do reload de troca de conta/rede)
+  window.ethereum.request({ method: "eth_accounts" }).then((contas) => {
+    if (contas.length > 0) conectar();
+  });
 });
 
 // CONEXÃO COM METAMASK
@@ -867,6 +878,7 @@ async function conectar() {
     document.getElementById("txt-conta").textContent = conta;
     document.getElementById("txt-rede").textContent = `${chainId}`;
     document.getElementById("info-conexao").classList.remove("hidden");
+    document.getElementById("msg-desconectado").classList.add("hidden");
     document.getElementById("btn-conectar").textContent = "✅ Conectado";
     document.getElementById("btn-conectar").disabled = true;
 
@@ -879,9 +891,66 @@ async function conectar() {
       avisoRede.classList.add("hidden");
       log(`✅ Conectado como ${conta} na Sepolia.`, "success");
     }
+
+    // Saldo da conta em ETH
+    const saldo = await web3.eth.getBalance(conta);
+    document.getElementById("txt-saldo").textContent = formatarEth(saldo);
+
+    // Só lê o contrato se estiver na rede certa
+    if (chainId === SEPOLIA_CHAIN_ID && contract) {
+      await configurarPerfil();
+      atualizarDados();
+    }
   } catch (err) {
-    log("❌ Erro ao conectar: " + (err.message || err), "error");
+    log("❌ Erro ao conectar: " + traduzirErro(err), "error");
   }
+}
+
+/**
+ * Pede para o MetaMask trocar para a Sepolia (wallet_switchEthereumChain).
+ * Se a rede não estiver cadastrada na carteira (erro 4902), adiciona antes.
+ */
+async function trocarParaSepolia() {
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0xaa36a7" }],
+    });
+  } catch (err) {
+    if (err.code === 4902) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: "0xaa36a7",
+          chainName: "Sepolia",
+          nativeCurrency: { name: "SepoliaETH", symbol: "ETH", decimals: 18 },
+          rpcUrls: ["https://rpc.sepolia.org"],
+          blockExplorerUrls: ["https://sepolia.etherscan.io"],
+        }],
+      });
+    } else {
+      log("❌ Não foi possível trocar de rede: " + traduzirErro(err), "error");
+    }
+  }
+}
+
+/**
+ * Descobre se a conta conectada é a seguradora (owner) e mostra
+ * só as seções do perfil dela: área da seguradora ou área do segurado.
+ */
+async function configurarPerfil() {
+  const owner = await contract.methods.owner().call();
+  const ehOwner = owner.toLowerCase() === conta.toLowerCase();
+
+  document.querySelectorAll(".area-owner").forEach((s) => s.classList.toggle("hidden", !ehOwner));
+  document.querySelectorAll(".area-segurado").forEach((s) => s.classList.toggle("hidden", ehOwner));
+
+  // Troca as cores da página para o tema do segurado
+  document.body.classList.toggle("assegurado-page", !ehOwner);
+
+  const perfil = document.getElementById("txt-perfil");
+  perfil.textContent = ehOwner ? "Seguradora" : "Segurado";
+  perfil.className = `badge ${ehOwner ? "badge-owner" : "badge-user"}`;
 }
 
 // EMITIR APÓLICE (apenas owner)
@@ -930,8 +999,8 @@ async function emitirApolice() {
     log("⏳ Aguardando confirmação no MetaMask para emitir apólice…", "info");
 
     // .send() → transação — abre popup MetaMask
-    const receipt = await contract.methods
-      .emitirApolice(
+    const receipt = await enviarTransacao(
+      contract.methods.emitirApolice(
         proprietario,
         modelo,
         placa,
@@ -941,8 +1010,10 @@ async function emitirApolice() {
         dataInicio,
         dataFim,
         coberturas
-      )
-      .send({ from: conta });
+      ),
+      { from: conta },
+      "result-emitir"
+    );
 
     // Extrai o ID da apólice emitido pelo evento ApoliceEmitida
     const evento = receipt.events?.ApoliceEmitida;
@@ -951,13 +1022,13 @@ async function emitirApolice() {
     mostrarResultado(
       "result-emitir",
       `✅ Apólice #${novoId} emitida com sucesso!<br>
-       Tx Hash: <a href="https://sepolia.etherscan.io/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a>`,
+       ${statusConfirmada(receipt)}`,
       "success"
     );
     log(`✅ Apólice #${novoId} emitida. Tx: ${receipt.transactionHash}`, "success");
 
   } catch (err) {
-    const msg = err.message || String(err);
+    const msg = traduzirErro(err);
     mostrarResultado("result-emitir", "❌ Erro: " + msg, "error");
     log("❌ Erro ao emitir apólice: " + msg, "error");
   }
@@ -970,12 +1041,14 @@ async function emitirApolice() {
  * .call() → leitura gratuita (view), sem transação.
  */
 async function consultarApolice() {
-  if (!verificarPronto("result-consultar")) return;
+  // Erros vão para uma caixa separada, para não apagar a tabela de resultado
+  if (!verificarPronto("erro-consultar")) return;
+  document.getElementById("erro-consultar").classList.add("hidden");
 
   try {
     const id = parseInt(document.getElementById("c-apolice-id").value);
     if (!id || id < 1) {
-      return mostrarResultado("result-consultar", "⚠️ Informe um ID válido.", "warn");
+      return mostrarResultado("erro-consultar", "⚠️ Informe um ID válido.", "warn");
     }
 
     log(`⏳ Consultando apólice #${id}…`, "info");
@@ -1014,6 +1087,30 @@ async function consultarApolice() {
     document.getElementById("d-saldo").textContent =
       web3.utils.fromWei(saldo.toString(), "ether") + " ETH";
 
+    const premio = await contract.methods.valorPremio(id).call();
+    document.getElementById("d-premio").textContent = formatarEth(premio);
+
+    // Sinistros da apólice
+    const idsSinistros = await contract.methods.listarSinistrosApolice(id).call();
+    const tbody = document.getElementById("tb-sinistros-apolice");
+    tbody.innerHTML = "";
+    if (idsSinistros.length === 0) {
+      adicionarLinha(tbody, ["Nenhum sinistro registrado."], 6);
+    }
+    for (const sid of idsSinistros) {
+      const s = await contract.methods.sinistros(sid).call();
+      const st = Number(s.status);
+      const pago = st === 1 || st === 3;
+      adicionarLinha(tbody, [
+        `#${s.id}`,
+        TIPOS[Number(s.tipo)],
+        formatarEth(s.valorSolicitado),
+        pago ? formatarEth(s.valorIndenizacao) : "—",
+        STATUS_SINISTRO[st],
+        s.motivo || "—",
+      ]);
+    }
+
     // Status com badge colorido
     const statusNomes = ["PENDENTE", "ATIVA", "CANCELADA", "EXPIRADA"];
     const statusClasses = ["badge-yellow", "badge-green", "badge-red", "badge-gray"];
@@ -1025,8 +1122,9 @@ async function consultarApolice() {
     log(`✅ Apólice #${id} carregada.`, "success");
 
   } catch (err) {
-    const msg = err.message || String(err);
-    mostrarResultado("result-consultar", "❌ Erro: " + msg, "error");
+    const msg = traduzirErro(err);
+    document.getElementById("result-consultar").classList.add("hidden");
+    mostrarResultado("erro-consultar", "❌ Erro: " + msg, "error");
     log("❌ Erro ao consultar apólice: " + msg, "error");
   }
 }
@@ -1051,13 +1149,21 @@ async function registrarSinistro() {
     }
 
     const valorWei = web3.utils.toWei(valorEth, "ether");
-    const dataTs   = Math.floor(new Date(dataStr).getTime() / 1000);
+    let dataTs     = Math.floor(new Date(dataStr).getTime() / 1000);
+
+    // O campo só guarda minutos: se a data escolhida é o minuto atual, usa o horário exato.
+    // Sem isso, um sinistro registrado logo após pagar o prêmio ficaria com horário
+    // anterior ao início da cobertura e seria rejeitado.
+    const agora = Math.floor(Date.now() / 1000);
+    if (dataTs <= agora && agora - dataTs < 60) dataTs = agora;
 
     log(`⏳ Aguardando confirmação no MetaMask para registrar sinistro…`, "info");
 
-    const receipt = await contract.methods
-      .registrarSinistro(apoliceId, tipo, valorWei, dataTs)
-      .send({ from: conta });
+    const receipt = await enviarTransacao(
+      contract.methods.registrarSinistro(apoliceId, tipo, valorWei, dataTs),
+      { from: conta },
+      "result-sinistro"
+    );
 
     const evento  = receipt.events?.SinistroRegistrado;
     const novoId  = evento?.returnValues?.id ?? "N/A";
@@ -1065,14 +1171,14 @@ async function registrarSinistro() {
     mostrarResultado(
       "result-sinistro",
       `✅ Sinistro #${novoId} registrado com sucesso!<br>
-       Status: EM ANÁLISE<br>
-       Tx: <a href="https://sepolia.etherscan.io/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a>`,
+       Situação do sinistro: EM ANÁLISE<br>
+       ${statusConfirmada(receipt)}`,
       "success"
     );
     log(`✅ Sinistro #${novoId} registrado. Tx: ${receipt.transactionHash}`, "success");
 
   } catch (err) {
-    const msg = err.message || String(err);
+    const msg = traduzirErro(err);
     mostrarResultado("result-sinistro", "❌ Erro: " + msg, "error");
     log("❌ Erro ao registrar sinistro: " + msg, "error");
   }
@@ -1098,9 +1204,11 @@ async function analisarSinistro() {
 
     // analisarSinistro() é uma função de escrita (muda estado) que também
     // retorna valores. No Web3.js v4 usamos .send() e capturamos o evento.
-    const receipt = await contract.methods
-      .analisarSinistro(id)
-      .send({ from: conta });
+    const receipt = await enviarTransacao(
+      contract.methods.analisarSinistro(id),
+      { from: conta },
+      "result-analisar"
+    );
 
     // Captura os dados do evento SinistroAnalisado emitido pelo contrato
     const evento = receipt.events?.SinistroAnalisado;
@@ -1122,7 +1230,7 @@ async function analisarSinistro() {
           Franquia Aplicada: ${franquia} ETH<br>
           Valor de Indenização: ${indenizacao} ETH
         </div>
-        Tx: <a href="https://sepolia.etherscan.io/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a>`,
+        ${statusConfirmada(receipt)}`,
         aprovado ? "success" : "error"
       );
       log(`${icone} Sinistro #${id} ${aprovado ? "APROVADO" : "REJEITADO"}: ${motivo}`, aprovado ? "success" : "error");
@@ -1131,7 +1239,7 @@ async function analisarSinistro() {
     }
 
   } catch (err) {
-    const msg = err.message || String(err);
+    const msg = traduzirErro(err);
     mostrarResultado("result-analisar", "❌ Erro: " + msg, "error");
     log("❌ Erro ao analisar sinistro: " + msg, "error");
   }
@@ -1152,11 +1260,13 @@ async function pagarSinistro() {
       return mostrarResultado("result-pagar", "⚠️ Informe um ID válido.", "warn");
     }
 
-    log(`⏳ Aguardando confirmação no MetaMask para registrar pagamento do sinistro #${id}…`, "info");
+    log(`⏳ Aguardando confirmação no MetaMask para pagar o sinistro #${id}…`, "info");
 
-    const receipt = await contract.methods
-      .pagarSinistro(id)
-      .send({ from: conta });
+    const receipt = await enviarTransacao(
+      contract.methods.pagarSinistro(id),
+      { from: conta },
+      "result-pagar"
+    );
 
     const evento = receipt.events?.SinistroPago;
     const valor  = evento
@@ -1165,21 +1275,369 @@ async function pagarSinistro() {
 
     mostrarResultado(
       "result-pagar",
-      `✅ Pagamento do sinistro #${id} registrado!<br>
+      `✅ Indenização do sinistro #${id} paga ao segurado!<br>
        Valor: ${valor} ETH<br>
-       Tx: <a href="https://sepolia.etherscan.io/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a>`,
+       ${statusConfirmada(receipt)}`,
       "success"
     );
     log(`✅ Sinistro #${id} pago (${valor} ETH). Tx: ${receipt.transactionHash}`, "success");
 
   } catch (err) {
-    const msg = err.message || String(err);
+    const msg = traduzirErro(err);
     mostrarResultado("result-pagar", "❌ Erro: " + msg, "error");
     log("❌ Erro ao pagar sinistro: " + msg, "error");
   }
 }
 
+// PAGAR PRÊMIO (segurado)
+
+/**
+ * O segurado paga o prêmio da apólice em ETH.
+ * O valor é lido do contrato (valorPremio) e enviado no campo "value".
+ */
+async function pagarPremio() {
+  if (!verificarPronto("result-premio")) return;
+
+  try {
+    const id = parseInt(document.getElementById("pr-apolice-id").value);
+    if (!id || id < 1) {
+      return mostrarResultado("result-premio", "⚠️ Informe um ID válido.", "warn");
+    }
+
+    const premio = await contract.methods.valorPremio(id).call();
+    log(`⏳ Aguardando confirmação no MetaMask para pagar ${formatarEth(premio)} de prêmio…`, "info");
+
+    const receipt = await enviarTransacao(
+      contract.methods.pagarPremio(id),
+      { from: conta, value: premio },
+      "result-premio"
+    );
+
+    mostrarResultado(
+      "result-premio",
+      `✅ Prêmio de ${formatarEth(premio)} pago. A apólice #${id} está ATIVA.<br>
+       ${statusConfirmada(receipt)}`,
+      "success"
+    );
+    log(`✅ Prêmio da apólice #${id} pago. Tx: ${receipt.transactionHash}`, "success");
+
+  } catch (err) {
+    const msg = traduzirErro(err);
+    mostrarResultado("result-premio", "❌ Erro: " + msg, "error");
+    log("❌ Erro ao pagar prêmio: " + msg, "error");
+  }
+}
+
+// RESERVA DE FUNDOS (owner)
+
+/** A seguradora deposita ETH no contrato para pagar indenizações. */
+async function depositarFundos() {
+  if (!verificarPronto("result-reserva")) return;
+
+  try {
+    const valorEth = document.getElementById("r-deposito").value.trim();
+    if (!valorEth || Number(valorEth) <= 0) {
+      return mostrarResultado("result-reserva", "⚠️ Informe um valor maior que zero.", "warn");
+    }
+    const valorWei = web3.utils.toWei(valorEth, "ether");
+
+    const receipt = await enviarTransacao(
+      contract.methods.depositarFundos(),
+      { from: conta, value: valorWei },
+      "result-reserva"
+    );
+
+    mostrarResultado("result-reserva", `✅ ${valorEth} ETH depositados na reserva.<br>${statusConfirmada(receipt)}`, "success");
+    log(`✅ Depósito de ${valorEth} ETH. Tx: ${receipt.transactionHash}`, "success");
+
+  } catch (err) {
+    const msg = traduzirErro(err);
+    mostrarResultado("result-reserva", "❌ Erro: " + msg, "error");
+    log("❌ Erro ao depositar: " + msg, "error");
+  }
+}
+
+/** A seguradora saca o que sobra na reserva (o contrato não deixa sacar o que já foi aprovado). */
+async function sacarFundos() {
+  if (!verificarPronto("result-reserva")) return;
+
+  try {
+    const valorEth = document.getElementById("r-saque").value.trim();
+    if (!valorEth || Number(valorEth) <= 0) {
+      return mostrarResultado("result-reserva", "⚠️ Informe um valor maior que zero.", "warn");
+    }
+    const valorWei = web3.utils.toWei(valorEth, "ether");
+
+    const receipt = await enviarTransacao(
+      contract.methods.sacarFundos(valorWei),
+      { from: conta },
+      "result-reserva"
+    );
+
+    mostrarResultado("result-reserva", `✅ ${valorEth} ETH sacados da reserva.<br>${statusConfirmada(receipt)}`, "success");
+    log(`✅ Saque de ${valorEth} ETH. Tx: ${receipt.transactionHash}`, "success");
+
+  } catch (err) {
+    const msg = traduzirErro(err);
+    mostrarResultado("result-reserva", "❌ Erro: " + msg, "error");
+    log("❌ Erro ao sacar: " + msg, "error");
+  }
+}
+
+// CANCELAR APÓLICE (owner)
+
+async function cancelarApolice() {
+  if (!verificarPronto("result-cancelar")) return;
+
+  try {
+    const id = parseInt(document.getElementById("x-apolice-id").value);
+    if (!id || id < 1) {
+      return mostrarResultado("result-cancelar", "⚠️ Informe um ID válido.", "warn");
+    }
+    if (!confirm(`Cancelar a apólice #${id}? Essa ação não pode ser desfeita.`)) return;
+
+    const receipt = await enviarTransacao(
+      contract.methods.cancelarApolice(id),
+      { from: conta },
+      "result-cancelar"
+    );
+
+    mostrarResultado("result-cancelar", `✅ Apólice #${id} cancelada.<br>${statusConfirmada(receipt)}`, "success");
+    log(`✅ Apólice #${id} cancelada. Tx: ${receipt.transactionHash}`, "success");
+
+  } catch (err) {
+    const msg = traduzirErro(err);
+    mostrarResultado("result-cancelar", "❌ Erro: " + msg, "error");
+    log("❌ Erro ao cancelar apólice: " + msg, "error");
+  }
+}
+
+// LEITURAS: PAINEL, MINHAS APÓLICES E EVENTOS
+
+/** Atualiza painel, lista de apólices e eventos (chamada após cada transação). */
+function atualizarDados() {
+  carregarPainel();
+  carregarMinhasApolices();
+  carregarEventos();
+}
+
+/** Lê os totais do contrato com .call() e preenche o painel. */
+async function carregarPainel() {
+  if (!contract) return;
+  try {
+    const [totalApolices, totalSinistros, saldo, aPagar, livre] = await Promise.all([
+      contract.methods.totalApolices().call(),
+      contract.methods.totalSinistros().call(),
+      contract.methods.saldoContrato().call(),
+      contract.methods.totalAPagar().call(),
+      contract.methods.saldoLivre().call(),
+    ]);
+
+    document.getElementById("p-total-apolices").textContent = totalApolices.toString();
+    document.getElementById("p-total-sinistros").textContent = totalSinistros.toString();
+    document.getElementById("p-saldo-contrato").textContent = formatarEth(saldo);
+    document.getElementById("p-total-apagar").textContent = formatarEth(aPagar);
+
+    // saldoLivre é int256 e pode ser negativo (falta dinheiro para o que já foi aprovado)
+    const elLivre = document.getElementById("p-saldo-livre");
+    const negativo = BigInt(livre) < 0n;
+    elLivre.textContent = (negativo ? "-" : "") + formatarEth(negativo ? -BigInt(livre) : livre);
+    elLivre.classList.toggle("valor-negativo", negativo);
+  } catch (err) {
+    log("❌ Erro ao ler o painel: " + traduzirErro(err), "error");
+  }
+}
+
+/** Lista as apólices da conta conectada, com o prêmio e o status de cada uma. */
+async function carregarMinhasApolices() {
+  if (!contract || !conta) return;
+  const tbody = document.getElementById("tb-minhas-apolices");
+  try {
+    const ids = await contract.methods.listarApolicesProprietario(conta).call();
+    tbody.innerHTML = "";
+    if (ids.length === 0) {
+      adicionarLinha(tbody, ["Nenhuma apólice emitida para esta carteira."], 4);
+      return;
+    }
+    for (const id of ids) {
+      const a = await contract.methods.consultarApolice(id).call();
+      const premio = await contract.methods.valorPremio(id).call();
+      adicionarLinha(tbody, [
+        `#${a.id}`,
+        `${a.modelo} · ${a.placa}`,
+        formatarEth(premio),
+        STATUS_APOLICE[Number(a.status)],
+      ]);
+    }
+  } catch (err) {
+    log("❌ Erro ao listar apólices: " + traduzirErro(err), "error");
+  }
+}
+
+/**
+ * Lê os eventos do contrato com getPastEvents e mostra os mais recentes primeiro.
+ * Busca a partir do bloco do deploy (DEPLOY_BLOCK em contrato.js).
+ */
+async function carregarEventos() {
+  if (!contract) return;
+  const lista = document.getElementById("lista-eventos");
+  try {
+    const eventos = await contract.getPastEvents("allEvents", {
+      fromBlock: DEPLOY_BLOCK,
+      toBlock: "latest",
+    });
+
+    lista.innerHTML = "";
+    if (eventos.length === 0) {
+      lista.innerHTML = "<li>Nenhum evento encontrado.</li>";
+      return;
+    }
+
+    eventos.reverse().slice(0, 30).forEach((ev) => {
+      const li = document.createElement("li");
+      li.textContent = descreverEvento(ev);
+
+      const detalhe = document.createElement("small");
+      const link = document.createElement("a");
+      link.href = `https://sepolia.etherscan.io/tx/${ev.transactionHash}`;
+      link.target = "_blank";
+      link.textContent = `bloco ${ev.blockNumber}`;
+      detalhe.append(`${ev.event} · `, link);
+      li.appendChild(detalhe);
+
+      lista.appendChild(li);
+    });
+  } catch (err) {
+    lista.innerHTML = "";
+    adicionarItem(lista, "Não foi possível ler os eventos: " + traduzirErro(err));
+  }
+}
+
+/** Monta um texto legível para cada tipo de evento do contrato. */
+function descreverEvento(ev) {
+  const r = ev.returnValues;
+  switch (ev.event) {
+    case "ApoliceEmitida":     return `Apólice #${r.id} emitida para ${encurtar(r.proprietario)} (placa ${r.placa})`;
+    case "ApoliceAtivada":     return `Prêmio da apólice #${r.id} pago (${formatarEth(r.premioPago)}), apólice ATIVA`;
+    case "ApoliceCancelada":   return `Apólice #${r.id} cancelada`;
+    case "SinistroRegistrado": return `Sinistro #${r.id} (${TIPOS[Number(r.tipo)]}) registrado na apólice #${r.apoliceId}: ${formatarEth(r.valorSolicitado)}`;
+    case "SinistroAnalisado":  return `Sinistro #${r.id} ${r.aprovado ? "APROVADO" : "REJEITADO"}: ${r.motivo}`;
+    case "SinistroPago":       return `Sinistro #${r.id} pago: ${formatarEth(r.valorPago)} para ${encurtar(r.proprietario)}`;
+    case "FundosDepositados":  return `Depósito de ${formatarEth(r.valor)} na reserva`;
+    case "FundosSacados":      return `Saque de ${formatarEth(r.valor)} da reserva`;
+    default:                   return ev.event;
+  }
+}
+
+// TRANSAÇÕES E ERROS
+
+/**
+ * Envia uma transação mostrando o estado na caixa de resultado:
+ * pendente (com o hash) → confirmada (quem chamou mostra o recibo) ou falhou (erro vai para o catch).
+ *
+ * Antes de enviar, simula a chamada com .call(): se o contrato for reverter,
+ * o erro aparece já decodificado (ex.: SaldoInsuficiente) e nenhum gas é gasto.
+ */
+async function enviarTransacao(metodo, opcoes, resultElId) {
+  await metodo.call(opcoes);
+
+  mostrarResultado(resultElId, "⏳ Aguardando assinatura no MetaMask…", "info");
+
+  const receipt = await metodo.send(opcoes).on("transactionHash", (hash) => {
+    mostrarResultado(resultElId, `⏳ Transação pendente, aguardando confirmação…<br>Tx: ${linkTx(hash)}`, "warn");
+    log(`⏳ Transação enviada: ${hash}`, "info");
+  });
+
+  log(`✅ Transação confirmada no bloco ${receipt.blockNumber}: ${receipt.transactionHash}`, "success");
+  atualizarDados();
+  return receipt;
+}
+
+/** Linha padrão de transação confirmada: bloco e link para o Etherscan. */
+function statusConfirmada(receipt) {
+  return `Status: confirmada no bloco ${receipt.blockNumber}<br>Tx: ${linkTx(receipt.transactionHash)}`;
+}
+
+/**
+ * Converte os erros do MetaMask, do Web3 e do contrato em mensagens claras.
+ * Os erros personalizados do contrato chegam decodificados pela ABI (errorName + errorArgs).
+ */
+function traduzirErro(err) {
+  if (!err) return "Erro desconhecido.";
+
+  const codigo = err.code ?? err.cause?.code;
+  if (codigo === 4001 || /User denied|rejected/i.test(err.message || "")) {
+    return "Transação rejeitada no MetaMask.";
+  }
+
+  const detalhe = err.innerError || err.cause || {};
+  const a = detalhe.errorArgs || {};
+  switch (detalhe.errorName) {
+    case "PremioIncorreto":
+      return `Valor do prêmio incorreto: esperado ${formatarEth(a.esperado)}, enviado ${formatarEth(a.recebido)}.`;
+    case "SaldoInsuficiente":
+      return `Saldo insuficiente no contrato: disponível ${formatarEth(a.disponivel)}, necessário ${formatarEth(a.solicitado)}.`;
+    case "PlacaJaSegurada":
+      return `A placa ${a.placa} já tem a apólice #${a.apoliceId} vigente.`;
+    case "TransferenciaFalhou":
+      return `A transferência de ${formatarEth(a.valor)} para ${encurtar(a.destino)} falhou.`;
+    case "Error":
+      return a.message;   // mensagem de um require()
+  }
+
+  const texto = `${err.message || ""} ${detalhe.message || ""}`;
+  // A simulação (.call) devolve "insufficient balance"; o envio devolve "insufficient funds"
+  if (/insufficient (funds|balance)/i.test(texto)) {
+    return "Saldo de ETH insuficiente na carteira para pagar o valor e o gas.";
+  }
+  // Transação minerada mas revertida (o recibo vem com status 0)
+  if (/reverted by the EVM/i.test(texto)) {
+    return "A transação falhou: foi revertida pelo contrato.";
+  }
+  return detalhe.message || err.message || String(err);
+}
+
 // UTILITÁRIOS
+
+const TIPOS = ["Colisão", "Roubo", "Incêndio"];
+const STATUS_APOLICE = ["PENDENTE", "ATIVA", "CANCELADA", "EXPIRADA"];
+const STATUS_SINISTRO = ["EM ANÁLISE", "APROVADO", "REJEITADO", "PAGO"];
+
+/** Converte wei (BigInt ou string) para texto em ETH. */
+function formatarEth(wei) {
+  return web3.utils.fromWei(wei.toString(), "ether") + " ETH";
+}
+
+/** Mostra só o começo e o fim de um endereço: 0x1234…abcd */
+function encurtar(endereco) {
+  return `${endereco.slice(0, 6)}…${endereco.slice(-4)}`;
+}
+
+/** Link para a transação no Sepolia Etherscan. */
+function linkTx(hash) {
+  return `<a href="https://sepolia.etherscan.io/tx/${hash}" target="_blank">${hash}</a>`;
+}
+
+/**
+ * Adiciona uma linha numa tabela usando textContent
+ * (dados vindos da blockchain não são inseridos como HTML).
+ */
+function adicionarLinha(tbody, valores, colspan) {
+  const tr = document.createElement("tr");
+  valores.forEach((v) => {
+    const td = document.createElement("td");
+    td.textContent = v;
+    if (colspan) td.colSpan = colspan;
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+}
+
+function adicionarItem(lista, texto) {
+  const li = document.createElement("li");
+  li.textContent = texto;
+  lista.appendChild(li);
+}
 
 /**
  * Verifica se o Web3, o contrato e a conta estão prontos para uso.

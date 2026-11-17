@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 /// @title SeguroChain
 /// @author Trabalho 2 — ODS III
 /// @notice Contrato de seguro veicular descentralizado na rede Ethereum Sepolia.
 ///         A seguradora é o endereço que faz o deploy (owner). Os segurados
 ///         interagem por meio de carteiras MetaMask.
-/// @dev    Solidity 0.8.20 — sem overflow, sem SafeMath necessário.
+/// @dev    Solidity 0.8.24 — sem overflow, sem SafeMath necessário.
 contract SeguroChain {
 
     // ENUMERAÇÕES
- 
+    // [Recurso: StructsEEnums]
 
     /// @notice Tipos de cobertura disponíveis no seguro
     enum TipoCobertura { COLISAO, ROUBO, INCENDIO }
@@ -22,11 +22,12 @@ contract SeguroChain {
     enum StatusSinistro { EM_ANALISE, APROVADO, REJEITADO, PAGO }
 
     // STRUCTS
+    // [Recurso: StructsEEnums]
 
     /// @notice Representa uma apólice de seguro veicular
     struct Apolice {
         uint256 id;
-        address proprietario;       // carteira do segurado
+        address payable proprietario; // carteira do segurado, recebe a indenização em ETH
         string  modelo;             // modelo/identificação do veículo
         string  placa;              // placa do veículo
         uint256 ano;                // ano de fabricação do veículo
@@ -53,15 +54,21 @@ contract SeguroChain {
     }
 
     // VARIÁVEIS DE ESTADO
+    // [Recurso: TiposDeDados]
 
-    /// @notice Endereço da seguradora (deployer)
-    address public owner;
+    /// @notice Endereço da seguradora (deployer). Definido no deploy e não muda mais.
+    address payable public immutable owner;
 
     /// @notice Contador de apólices emitidas (também serve de próximo ID)
     uint256 public totalApolices;
 
     /// @notice Contador de sinistros registrados (também serve de próximo ID)
     uint256 public totalSinistros;
+
+    /// @notice Soma das indenizações aprovadas que ainda não foram pagas (em wei)
+    uint256 public totalAPagar;
+
+    // [Recurso: ArraysEMappings]
 
     /// @notice Mapeamento ID → Apólice
     mapping(uint256 => Apolice) public apolices;
@@ -75,6 +82,10 @@ contract SeguroChain {
     /// @notice IDs de apólices vinculados a cada carteira
     mapping(address => uint256[]) public apolicesDoProprietario;
 
+    /// @notice Hash da placa → apólice vigente (0 = placa livre).
+    ///         Impede duas apólices ao mesmo tempo para o mesmo veículo.
+    mapping(bytes32 => uint256) public apoliceAtivaDaPlaca;
+
     // CONSTANTES DE REGRA DE NEGÓCIO
 
     /// @notice Percentual máximo da franquia em relação ao valor segurado (20%)
@@ -83,7 +94,14 @@ contract SeguroChain {
     /// @notice Percentual do valor segurado que caracteriza perda total (75%)
     uint256 public constant PERCENTUAL_PERDA_TOTAL = 75;
 
+    /// @notice Prêmio cobrado do segurado: 5% do valor segurado
+    uint256 public constant PERCENTUAL_PREMIO = 5;
+
+    /// @notice Limite de sinistros por apólice (mantém o laço de contagem com custo controlado)
+    uint256 public constant MAX_SINISTROS_POR_APOLICE = 10;
+
     // EVENTOS
+    // [Recurso: EventosEErros]
 
     /// @notice Disparado quando uma nova apólice é emitida
     event ApoliceEmitida(
@@ -99,8 +117,8 @@ contract SeguroChain {
         bool[3] coberturas
     );
 
-    /// @notice Disparado quando uma apólice muda para status ATIVA
-    event ApoliceAtivada(uint256 indexed id);
+    /// @notice Disparado quando o segurado paga o prêmio e a apólice muda para ATIVA
+    event ApoliceAtivada(uint256 indexed id, address indexed proprietario, uint256 premioPago);
 
     /// @notice Disparado quando uma apólice é cancelada
     event ApoliceCancelada(uint256 indexed id);
@@ -132,7 +150,28 @@ contract SeguroChain {
         address indexed proprietario
     );
 
+    /// @notice Disparado quando a seguradora deposita ETH na reserva
+    event FundosDepositados(address indexed de, uint256 valor);
+
+    /// @notice Disparado quando a seguradora saca o excedente da reserva
+    event FundosSacados(address indexed para, uint256 valor);
+
+    // ERROS PERSONALIZADOS  [Recurso: EventosEErros]
+
+    /// @notice Valor enviado em pagarPremio diferente do prêmio da apólice
+    error PremioIncorreto(uint256 esperado, uint256 recebido);
+
+    /// @notice Saldo do contrato não cobre o valor pedido
+    error SaldoInsuficiente(uint256 disponivel, uint256 solicitado);
+
+    /// @notice A placa já tem uma apólice vigente
+    error PlacaJaSegurada(string placa, uint256 apoliceId);
+
+    /// @notice A transferência de ETH foi recusada pelo destino
+    error TransferenciaFalhou(address destino, uint256 valor);
+
     // MODIFIERS
+    // [Recurso: Modificadores]
 
     /// @dev Restringe a chamada ao endereço da seguradora (owner)
     modifier apenasOwner() {
@@ -162,10 +201,11 @@ contract SeguroChain {
     }
 
     // CONSTRUTOR
+    // [Recurso: Funcoes]
 
     /// @notice Inicializa o contrato definindo o deployer como seguradora (owner)
     constructor() {
-        owner = msg.sender;
+        owner = payable(msg.sender);
     }
 
     // FUNÇÕES DA SEGURADORA — APÓLICES
@@ -183,7 +223,7 @@ contract SeguroChain {
     /// @param _coberturas    Array de coberturas: [COLISAO, ROUBO, INCENDIO]
     /// @return               ID da apólice criada
     function emitirApolice(
-        address _proprietario,
+        address payable _proprietario,
         string  calldata _modelo,
         string  calldata _placa,
         uint256 _ano,
@@ -197,6 +237,7 @@ contract SeguroChain {
         apenasOwner
         returns (uint256)
     {
+        // [Recurso: EstruturasDeControle]
         // --- Validações básicas ---
         require(_proprietario != address(0),          "Proprietario invalido");
         require(bytes(_modelo).length > 0,            "Modelo obrigatorio");
@@ -204,7 +245,8 @@ contract SeguroChain {
         require(_ano > 1900 && _ano <= 2100,          "Ano invalido");
         require(_valorSegurado > 0,                   "Valor segurado deve ser maior que zero");
         require(_dataFim > _dataInicio,               "Data fim deve ser posterior a data inicio");
-        require(_dataInicio >= block.timestamp,       "Data inicio nao pode ser no passado");
+        // Aceita início no mesmo dia (até 24h atrás), para a apólice poder começar "hoje"
+        require(_dataInicio + 1 days >= block.timestamp, "Data inicio nao pode ser no passado");
 
         // --- Regra: franquia não pode exceder PERCENTUAL_MAXIMO_FRANQUIA% do valor segurado ---
         uint256 franquiaMaxima = (_valorSegurado * PERCENTUAL_MAXIMO_FRANQUIA) / 100;
@@ -220,6 +262,8 @@ contract SeguroChain {
         uint256 novoId = totalApolices + 1;
         totalApolices  = novoId;
 
+        _reservarPlaca(_placa, novoId);
+
         apolices[novoId] = Apolice({
             id:               novoId,
             proprietario:     _proprietario,
@@ -232,7 +276,7 @@ contract SeguroChain {
             dataFim:          _dataFim,
             coberturas:       _coberturas,
             valorComprometido: 0,
-            status:           StatusApolice.ATIVA
+            status:           StatusApolice.PENDENTE   // fica ATIVA quando o segurado paga o prêmio
         });
 
         apolicesDoProprietario[_proprietario].push(novoId);
@@ -253,19 +297,31 @@ contract SeguroChain {
         return novoId;
     }
 
-    /// @notice Ativa uma apólice que estava pendente.
+    /// @notice O segurado paga o prêmio em ETH e a apólice que estava pendente fica ATIVA.
+    ///         O valor enviado precisa ser exatamente o prêmio (ver valorPremio).
     /// @param _id ID da apólice
-    function ativarApolice(uint256 _id)
+    // [Recurso: Funcoes] payable
+    function pagarPremio(uint256 _id)
         external
-        apenasOwner
+        payable
         apoliceExiste(_id)
+        apenasDono(_id)
     {
         require(
             apolices[_id].status == StatusApolice.PENDENTE,
             "Apenas apolices PENDENTE podem ser ativadas"
         );
+        uint256 premio = valorPremio(_id);
+        if (msg.value != premio) revert PremioIncorreto(premio, msg.value);
+
+        // A cobertura só começa quando o prêmio é pago: impede contratar o seguro
+        // depois do acidente e registrar um sinistro com data anterior ao pagamento
+        if (block.timestamp > apolices[_id].dataInicio) {
+            apolices[_id].dataInicio = block.timestamp;
+        }
+
         apolices[_id].status = StatusApolice.ATIVA;
-        emit ApoliceAtivada(_id);
+        emit ApoliceAtivada(_id, msg.sender, msg.value);
     }
 
     /// @notice Cancela uma apólice ativa ou pendente.
@@ -281,8 +337,10 @@ contract SeguroChain {
             "Apolice nao pode ser cancelada neste estado"
         );
         apolices[_id].status = StatusApolice.CANCELADA;
+        _liberarPlaca(_id);
         emit ApoliceCancelada(_id);
     }
+
     // FUNÇÕES DE CONSULTA — APÓLICES
 
     /// @notice Retorna todos os dados de uma apólice.
@@ -312,6 +370,19 @@ contract SeguroChain {
             return 0;
         }
         return a.valorSegurado - a.valorComprometido;
+    }
+
+    /// @notice Retorna o prêmio que o segurado precisa pagar para ativar a apólice.
+    ///         prêmio = PERCENTUAL_PREMIO% do valor segurado
+    /// @param _id ID da apólice
+    /// @return Prêmio em wei
+    function valorPremio(uint256 _id)
+        public
+        view
+        apoliceExiste(_id)
+        returns (uint256)
+    {
+        return (apolices[_id].valorSegurado * PERCENTUAL_PREMIO) / 100;
     }
 
     /// @notice Verifica se uma apólice está vigente em determinada data.
@@ -360,12 +431,20 @@ contract SeguroChain {
         uint256 _data
     )
         external
-        apenasDono(_apoliceId)
         apoliceExiste(_apoliceId)
+        apenasDono(_apoliceId)
         returns (uint256)
     {
+        require(
+            apolices[_apoliceId].status == StatusApolice.ATIVA,
+            "Apolice precisa estar ATIVA (premio pago)"
+        );
         require(_valorSolicitado > 0, "Valor solicitado deve ser maior que zero");
         require(_data > 0,            "Data do sinistro invalida");
+        require(
+            sinistrosDaApolice[_apoliceId].length < MAX_SINISTROS_POR_APOLICE,
+            "Limite de sinistros da apolice atingido"
+        );
 
         uint256 novoId     = totalSinistros + 1;
         totalSinistros     = novoId;
@@ -518,15 +597,15 @@ contract SeguroChain {
         s.franquiaAplicada  = franquiaAplicada;
         s.valorIndenizacao  = valorIndenizacao;
         a.valorComprometido += valorIndenizacao;
+        totalAPagar         += valorIndenizacao;
 
         emit SinistroAnalisado(_id, s.apoliceId, true, franquiaAplicada, valorIndenizacao, motivo);
         return (aprovado, franquiaAplicada, valorIndenizacao, motivo);
     }
 
-    /// @notice Registra o pagamento de um sinistro aprovado.
+    /// @notice Paga a indenização de um sinistro aprovado, transferindo ETH do
+    ///         contrato para a carteira do segurado.
     ///         Apenas a seguradora (owner) pode chamar esta função.
-    ///         Nota: o pagamento real (transferência de ETH) é feito off-chain
-    ///         ou via sistema da seguradora — este contrato apenas registra o estado.
     /// @param _id ID do sinistro
     function pagarSinistro(uint256 _id)
         external
@@ -536,11 +615,58 @@ contract SeguroChain {
         Sinistro storage s = sinistros[_id];
         require(s.status == StatusSinistro.APROVADO, "Sinistro deve estar APROVADO para ser pago");
 
-        s.status = StatusSinistro.PAGO;
+        uint256 valor = s.valorIndenizacao;
+        if (address(this).balance < valor) {
+            revert SaldoInsuficiente(address(this).balance, valor);
+        }
 
-        address proprietario = apolices[s.apoliceId].proprietario;
+        // Atualiza o estado antes de transferir (checks-effects-interactions):
+        // se a chamada voltar para cá, o sinistro já está como PAGO
+        s.status     = StatusSinistro.PAGO;
+        totalAPagar -= valor;
 
-        emit SinistroPago(_id, s.apoliceId, s.valorIndenizacao, proprietario);
+        address payable proprietario = apolices[s.apoliceId].proprietario;
+
+        (bool ok, ) = proprietario.call{value: valor}("");
+        if (!ok) revert TransferenciaFalhou(proprietario, valor);
+
+        emit SinistroPago(_id, s.apoliceId, valor, proprietario);
+    }
+
+    // FUNÇÕES DA SEGURADORA — RESERVA DE FUNDOS
+
+    /// @notice A seguradora deposita ETH no contrato para pagar as indenizações.
+    // [Recurso: Funcoes] payable
+    function depositarFundos() external payable apenasOwner {
+        require(msg.value > 0, "Envie algum valor em ETH");
+        emit FundosDepositados(msg.sender, msg.value);
+    }
+
+    /// @notice A seguradora saca o que sobra na reserva. Não é possível sacar
+    ///         o valor das indenizações já aprovadas e ainda não pagas.
+    /// @param _valor Valor a sacar (em wei)
+    function sacarFundos(uint256 _valor) external apenasOwner {
+        int256 livre = saldoLivre();
+        if (livre < 0 || uint256(livre) < _valor) {
+            revert SaldoInsuficiente(livre < 0 ? 0 : uint256(livre), _valor);
+        }
+
+        emit FundosSacados(owner, _valor);
+
+        (bool ok, ) = owner.call{value: _valor}("");
+        if (!ok) revert TransferenciaFalhou(owner, _valor);
+    }
+
+    /// @notice Saldo de ETH guardado no contrato.
+    function saldoContrato() external view returns (uint256) {
+        return address(this).balance;
+    }
+
+    /// @notice Saldo do contrato menos as indenizações aprovadas e ainda não pagas.
+    ///         Fica negativo quando falta dinheiro para pagar o que já foi aprovado.
+    // [Recurso: TiposDeDados] int256, pois o resultado pode ser negativo
+    function saldoLivre() public view returns (int256) {
+        return int256(address(this).balance) - int256(totalAPagar);
     }
 
     // FUNÇÕES DE CONSULTA — SINISTROS
@@ -557,7 +683,45 @@ contract SeguroChain {
         return sinistrosDaApolice[_apoliceId];
     }
 
+    /// @notice Conta quantos sinistros de uma apólice estão em determinado status.
+    /// @param _apoliceId ID da apólice
+    /// @param _status    Status a contar
+    /// @return quantidade Número de sinistros nesse status
+    function contarSinistrosPorStatus(uint256 _apoliceId, StatusSinistro _status)
+        external
+        view
+        apoliceExiste(_apoliceId)
+        returns (uint256 quantidade)
+    {
+        uint256[] storage ids = sinistrosDaApolice[_apoliceId];
+        // [Recurso: EstruturasDeControle]
+        // O laço é limitado: cada apólice tem no máximo MAX_SINISTROS_POR_APOLICE sinistros
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (sinistros[ids[i]].status == _status) {
+                quantidade++;
+            }
+        }
+    }
+
     // FUNÇÕES INTERNAS / AUXILIARES
+
+    /// @dev Registra a placa como segurada, usando o hash da placa como chave.
+    // [Recurso: Funcoes] private
+    function _reservarPlaca(string calldata _placa, uint256 _apoliceId) private {
+        // [Recurso: TiposDeDados] bytes32
+        bytes32 hashPlaca = keccak256(bytes(_placa));
+        uint256 existente = apoliceAtivaDaPlaca[hashPlaca];
+        if (existente != 0) revert PlacaJaSegurada(_placa, existente);
+        apoliceAtivaDaPlaca[hashPlaca] = _apoliceId;
+    }
+
+    /// @dev Libera a placa quando a apólice é cancelada.
+    function _liberarPlaca(uint256 _apoliceId) internal {
+        bytes32 hashPlaca = keccak256(bytes(apolices[_apoliceId].placa));
+        if (apoliceAtivaDaPlaca[hashPlaca] == _apoliceId) {
+            delete apoliceAtivaDaPlaca[hashPlaca];
+        }
+    }
 
     /// @dev Converte um uint256 para sua representação em string decimal.
     ///      Usado internamente para compor mensagens de motivo.
