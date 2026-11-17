@@ -720,14 +720,28 @@ async function carregarMinhasApolices() {
 
 /**
  * Lê os eventos do contrato com getPastEvents e mostra os mais recentes primeiro.
- * Busca a partir do bloco do deploy (DEPLOY_BLOCK em contrato.js).
+ * Busca a partir do bloco do deploy (DEPLOY_BLOCK em contrato.js), respeitando
+ * o limite máximo de 10.000 blocos imposto pelos nós RPC públicos da Sepolia.
  */
 async function carregarEventos() {
   if (!contract) return;
   const lista = document.getElementById("lista-eventos");
   try {
+    const blocoAtual = Number(await web3.eth.getBlockNumber());
+    const LIMITE_RANGE = 9990;
+
+    // Se DEPLOY_BLOCK não foi configurado (valor 0) ou se a distância for maior que o limite do RPC,
+    // calcula o ponto inicial para não estourar o limite de 10.000 blocos por consulta
+    let fromBlock = (typeof DEPLOY_BLOCK === "number" && DEPLOY_BLOCK > 0)
+      ? DEPLOY_BLOCK
+      : Math.max(0, blocoAtual - LIMITE_RANGE);
+
+    if (blocoAtual - fromBlock > LIMITE_RANGE) {
+      fromBlock = Math.max(0, blocoAtual - LIMITE_RANGE);
+    }
+
     const eventos = await contract.getPastEvents("allEvents", {
-      fromBlock: DEPLOY_BLOCK,
+      fromBlock: fromBlock,
       toBlock: "latest",
     });
 
