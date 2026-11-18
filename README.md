@@ -41,10 +41,10 @@ O estado `EXPIRADA` existe no enum mas ainda não é usado (ver Limitações).
 
 | Nome | Papel |
 |---|---|
-| (preencher) | Contrato (Solidity, testes no Remix) |
-| (preencher) | Frontend (HTML e CSS) |
-| (preencher) | Integração Web3 (Web3.js, MetaMask, eventos) |
-| (preencher) | Documentação e testes (README, vídeo, apresentação) |
+| Amós e Handryo | Contrato (Solidity, testes no Remix) |
+| Amós e Handryo | Frontend (HTML e CSS) |
+| Amós | Integração Web3 (Web3.js, MetaMask, eventos) |
+| Amós e Handryo | Documentação e testes (README, vídeo, apresentação) |
 
 ## 3. Deploy na Sepolia
 
