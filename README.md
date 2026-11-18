@@ -50,7 +50,7 @@ O estado `EXPIRADA` existe no enum mas ainda não é usado (ver Limitações).
 
 | | |
 |---|---|
-| Endereço do contrato | `(preencher)` |
+| Endereço do contrato | 0x989b1612A1B7123e422422926553e3197BcF8Af1 |
 | Etherscan | https://sepolia.etherscan.io/address/(preencher) |
 | Hash da transação de deploy | `(preencher)` |
 | Bloco | (preencher) |
