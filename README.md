@@ -8,7 +8,7 @@ Trabalho 2 de ODS III: dApp de seguro veicular na rede Ethereum Sepolia, com con
 | dApp na Vercel | https://(preencher).vercel.app |
 | Contrato na Sepolia | `(preencher)` |
 | Vídeo de demonstração | (preencher) |
-| Slides | [docs/slides.pdf](segurochain-dapp/docs/slides.pdf) |
+| Slides | [SeguroChain](https://canva.link/7zipel4ovjvhk01) |
 
 ## 1. Tema e problema
 
